@@ -1,0 +1,6 @@
+# ide
+.vscode/
+# env
+.venv/
+
+models/
