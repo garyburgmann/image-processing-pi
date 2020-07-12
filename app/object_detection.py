@@ -22,7 +22,7 @@ class ObjectDetection:
         self,
         interpreter_path: str = '/tmp/detect.tflite',
         labels_path: str = '/tmp/coco_labels.txt',
-        target_label: str = '__all__',
+        target_label: str = 'person',
         threshold: float = 0.6
     ):
         """ ObjectDetection constructor
@@ -117,19 +117,13 @@ class ObjectDetection:
                 results.append(result)
         return results
 
-    def _load_image(self, img_input: np.ndarray) -> Image:
+    def _resize_image(self, img: Image.Image) -> Image.Image:
         _, input_height, input_width, _ = self._input_details[0]['shape']
-        return (
-            Image.fromarray(img_input)
-            .resize(
-                (input_width, input_height),
-                Image.ANTIALIAS
-            )
-        )
+        return img.resize((input_width, input_height), Image.ANTIALIAS)
 
-    def exec(self, img_input: np.ndarray) -> List[Dict]:
+    def exec(self, img: Image.Image) -> List[Dict]:
         try:
-            image = self._load_image(img_input)
+            image = self._resize_image(img)
             # start_time = time.monotonic()
             results = self._detect_objects(image)
             # elapsed_ms = (time.monotonic() - start_time) * 1000

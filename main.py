@@ -8,9 +8,11 @@ import copy
 # import requests
 import cv2
 import numpy as np
+from PIL import Image
 
 from app.object_detection import ObjectDetection
 from app.pre_captured_video import PreCapturedVideo
+# from app.live_capture_video import LiveCaptureVideo
 
 # these are my local working models from ./models
 # adjust as necessary
@@ -22,15 +24,16 @@ MODEL_OPTS = [
 od = ObjectDetection(interpreter_path=MODEL_OPTS[1])
 
 
-def run(img: np.ndarray) -> int:
-    # img = kwargs['img']
+def run(img: Image.Image) -> int:
+    np_img = np.array(img)
 
     res = od.exec(img)
 
     bbox_list = []
     conf_list = []
 
-    CAMERA_HEIGHT, CAMERA_WIDTH = img.shape[:2]
+    CAMERA_HEIGHT, CAMERA_WIDTH = np_img.shape[:2]
+    # CAMERA_HEIGHT, CAMERA_WIDTH = img.size
 
     if res:
         for bbox in res:
@@ -45,10 +48,10 @@ def run(img: np.ndarray) -> int:
             label = bbox['class']
 
             # draw bounding box
-            cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (125, 255, 51), 2)
+            cv2.rectangle(np_img, (xmin, ymin), (xmax, ymax), (125, 255, 51), 2)
             # draw label above bounding box
             cv2.putText(
-                img,
+                np_img,
                 f'{label.capitalize()} | {confidence:.2f}',
                 (xmin, ymin - 20),
                 cv2.FONT_HERSHEY_COMPLEX,
@@ -58,7 +61,7 @@ def run(img: np.ndarray) -> int:
             )
 
     if True:
-        cv2.imshow('img', img[:, :, ::-1])
+        cv2.imshow('img', np_img[:, :, ::-1])
 
     return len(res)
 
@@ -73,10 +76,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # videofile = args.v
-    # cap = cv2.VideoCapture(videofile)
-
-    video = PreCapturedVideo(args.v)
+    if args.v:
+        video = PreCapturedVideo(args.v)
+    else:
+        raise ValueError('Missing argument for video path')
+    #     video = LiveCaptureVideo
 
     start = time.time()
     num_frames = 1
