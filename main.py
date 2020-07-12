@@ -11,11 +11,18 @@ import numpy as np
 
 from object_detection import ObjectDetection
 
-od = ObjectDetection()
+# these are my local working models from ./models
+# adjust as necessary
+MODEL_OPTS = [
+    './models/ssd_mobilenet_v3_small_coco_2020_01_14/model.tflite',
+    '/tmp/detect.tflite'
+
+]
+od = ObjectDetection(interpreter_path=MODEL_OPTS[0])
 
 
-def run(img: np.ndarray):
-    img = kwargs['img']
+def run(img: np.ndarray) -> int:
+    # img = kwargs['img']
 
     res = od.exec(img)
 
@@ -52,6 +59,8 @@ def run(img: np.ndarray):
     if True:
         cv2.imshow('img', img[:, :, ::-1])
 
+    return len(res)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run object detection')
@@ -69,11 +78,13 @@ if __name__ == '__main__':
     start = time.time()
     num_frames = 1
     t = 0
+    n = 0
     while(cap.isOpened()):
         ret, cv2_im = cap.read()
         if ret is True:
             frame = cv2.cvtColor(cv2_im, cv2.COLOR_BGR2RGB)
-            run(img=frame, frame=num_frames, endpoint=args.e)
+            num_detections = run(img=frame)
+            n += num_detections
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -81,7 +92,9 @@ if __name__ == '__main__':
             print(
                 f'Time: {int(t)}, '
                 f'Frames: {num_frames}, '
-                f'FPS: {int(num_frames/t)}'
+                f'FPS: {int(num_frames/t)}, '
+                f'Num Detections: {num_detections}, '
+                f'N: {n}'
             )
             num_frames += 1
 
