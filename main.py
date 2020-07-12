@@ -9,7 +9,8 @@ import copy
 import cv2
 import numpy as np
 
-from object_detection import ObjectDetection
+from app.object_detection import ObjectDetection
+from app.pre_captured_video import PreCapturedVideo
 
 # these are my local working models from ./models
 # adjust as necessary
@@ -18,7 +19,7 @@ MODEL_OPTS = [
     '/tmp/detect.tflite'
 
 ]
-od = ObjectDetection(interpreter_path=MODEL_OPTS[0])
+od = ObjectDetection(interpreter_path=MODEL_OPTS[1])
 
 
 def run(img: np.ndarray) -> int:
@@ -72,31 +73,24 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    videofile = args.v
-    cap = cv2.VideoCapture(videofile)
+    # videofile = args.v
+    # cap = cv2.VideoCapture(videofile)
+
+    video = PreCapturedVideo(args.v)
 
     start = time.time()
     num_frames = 1
     t = 0
     n = 0
-    while(cap.isOpened()):
-        ret, cv2_im = cap.read()
-        if ret is True:
-            frame = cv2.cvtColor(cv2_im, cv2.COLOR_BGR2RGB)
-            num_detections = run(img=frame)
-            n += num_detections
-
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-            t = time.time() - start
-            print(
-                f'Time: {int(t)}, '
-                f'Frames: {num_frames}, '
-                f'FPS: {int(num_frames/t)}, '
-                f'Num Detections: {num_detections}, '
-                f'N: {n}'
-            )
-            num_frames += 1
-
-    cap.release()
-    cv2.destroyAllWindows()
+    for frame in video.frames():
+        num_detections = run(img=frame)
+        n += num_detections
+        t = time.time() - start
+        print(
+            f'Time: {int(t)}, '
+            f'Frames: {num_frames}, '
+            f'FPS: {int(num_frames/t)}, '
+            f'Num Detections: {num_detections}, '
+            f'N: {n}'
+        )
+        num_frames += 1
