@@ -1,6 +1,13 @@
 # ide
 .vscode/
+
 # env
 .venv/
 
+# project
 models/
+*.webm
+
+# python
+__pycache__/
+*.pyc
