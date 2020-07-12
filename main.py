@@ -5,7 +5,6 @@ import argparse
 import json
 import copy
 
-# import requests
 import cv2
 import numpy as np
 from PIL import Image
@@ -14,17 +13,8 @@ from app.object_detection import ObjectDetection
 from app.pre_captured_video import PreCapturedVideo
 # from app.live_capture_video import LiveCaptureVideo
 
-# these are my local working models from ./models
-# adjust as necessary
-MODEL_OPTS = [
-    './models/ssd_mobilenet_v3_small_coco_2020_01_14/model.tflite',
-    '/tmp/detect.tflite'
 
-]
-od = ObjectDetection(interpreter_path=MODEL_OPTS[1])
-
-
-def run(img: Image.Image) -> int:
+def run(img: Image.Image, od=ObjectDetection) -> int:
     np_img = np.array(img)
 
     res = od.exec(img)
@@ -66,35 +56,62 @@ def run(img: Image.Image) -> int:
     return len(res)
 
 
-if __name__ == '__main__':
+def parse_args():
     parser = argparse.ArgumentParser(description='Run object detection')
     parser.add_argument(
         '-v',
         type=str,
         help='path to video file'
     )
+    parser.add_argument(
+        '-m',
+        type=str,
+        help='path to model'
+    )
+    return parser.parse_args()
 
-    args = parser.parse_args()
 
+def get_video_source(args):
+    """ load pre-captured video or use pi camera as source """
     if args.v:
-        video = PreCapturedVideo(args.v)
+        return PreCapturedVideo(args.v)
     else:
         raise ValueError('Missing argument for video path')
     #     video = LiveCaptureVideo
 
+
+def get_model_source(args):
+    """ load tf lite model source, default /tmp/detect.tflite """
+    if args.m:
+        return args.m
+    return '/tmp/detect.tflite'
+
+
+def log_metrics(t: int, n_frames: int, f_detections: int, t_detections: int):
+    # TODO: use logging
+    print(
+        f'Time: {int(t)}, '
+        f'Frames: {n_frames}, '
+        f'FPS: {int(n_frames/t)}, '
+        f'Frame Detections: {f_detections}, '
+        f'N: {t_detections}'
+    )
+
+
+if __name__ == '__main__':
+    args = parse_args()
+    video = get_video_source(args)
+    model_path = get_model_source(args)
+
+    od = ObjectDetection(interpreter_path=model_path)
+
     start = time.time()
     num_frames = 1
     t = 0
-    n = 0
+    total_detections = 0
     for frame in video.frames():
-        num_detections = run(img=frame)
-        n += num_detections
+        frame_detections = run(img=frame, od=od)
+        total_detections += frame_detections
         t = time.time() - start
-        print(
-            f'Time: {int(t)}, '
-            f'Frames: {num_frames}, '
-            f'FPS: {int(num_frames/t)}, '
-            f'Num Detections: {num_detections}, '
-            f'N: {n}'
-        )
+        log_metrics(t, num_frames, frame_detections, total_detections)
         num_frames += 1
