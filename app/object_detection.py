@@ -21,9 +21,9 @@ class ObjectDetection:
     def __init__(
         self,
         interpreter_path: str = '/tmp/detect.tflite',
-        labels_path: str = '/tmp/coco_labels.txt',
+        labels_path: str = '/tmp/labels_corrected.txt',
         target_label: str = 'person',
-        threshold: float = 0.6
+        threshold: float = 0.51
     ):
         """ ObjectDetection constructor
 
@@ -103,18 +103,28 @@ class ObjectDetection:
         scores = self._get_output_tensor(2)
         count = int(self._get_output_tensor(3))
 
-        results = []
-        for i in range(count):
-            label = self._labels[classes[i]].lower()
-            target = self._target_label.lower()
-            valid_label = target in [label, '__all__']
-            if scores[i] >= self._threshold and valid_label:
-                result = {
-                    'bounding_box': boxes[i],
-                    'class': label,
-                    'score': scores[i]
-                }
-                results.append(result)
+        results = [
+            {
+                'bounding_box': boxes[i],
+                'class': self._labels[classes[i]].lower(),
+                'score': scores[i]
+            }
+            for i in range(count)
+            if self._target_label.lower()
+            in [self._labels[classes[i]].lower(), '__all__']
+            and scores[i] >= self._threshold
+        ]
+        # for i in range(count):
+        #     label = self._labels[classes[i]].lower()
+        #     target = self._target_label.lower()
+        #     valid_label = target in [label, '__all__']
+        #     if scores[i] >= self._threshold and valid_label:
+        #         result = {
+        #             'bounding_box': boxes[i],
+        #             'class': label,
+        #             'score': scores[i]
+        #         }
+        #         results.append(result)
         return results
 
     def _resize_image(self, img: Image.Image) -> Image.Image:
