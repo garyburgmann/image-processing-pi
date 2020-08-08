@@ -4,6 +4,7 @@ import os
 import argparse
 import json
 import copy
+from typing import List, Any
 
 import cv2
 import numpy as np
@@ -15,17 +16,21 @@ from app.pre_captured_video import PreCapturedVideo
 
 
 def run(img: Image.Image, od=ObjectDetection) -> int:
-    np_img = np.array(img)
-
     res = od.exec(img)
 
     bbox_list = []
     conf_list = []
 
-    CAMERA_HEIGHT, CAMERA_WIDTH = np_img.shape[:2]
-    # CAMERA_HEIGHT, CAMERA_WIDTH = img.size
+    np_img = display_boxes(img, res)
 
+    return np_img, res, len(res)
+
+
+def display_boxes(img: Image.Image, res: List[Any]) -> np.ndarray:
     if res:
+        np_img = np.array(img)
+        CAMERA_HEIGHT, CAMERA_WIDTH = np_img.shape[:2]
+        # CAMERA_HEIGHT, CAMERA_WIDTH = img.size
         for bbox in res:
             ymin, xmin, ymax, xmax = bbox['bounding_box']
 
@@ -38,7 +43,13 @@ def run(img: Image.Image, od=ObjectDetection) -> int:
             label = bbox['class']
 
             # draw bounding box
-            cv2.rectangle(np_img, (xmin, ymin), (xmax, ymax), (125, 255, 51), 2)
+            cv2.rectangle(
+                np_img,
+                (xmin, ymin),
+                (xmax, ymax),
+                (125, 255, 51),
+                2
+            )
             # draw label above bounding box
             cv2.putText(
                 np_img,
@@ -53,7 +64,7 @@ def run(img: Image.Image, od=ObjectDetection) -> int:
     if True:
         cv2.imshow('img', np_img[:, :, ::-1])
 
-    return len(res)
+    return np_img
 
 
 def parse_args():
@@ -110,7 +121,7 @@ if __name__ == '__main__':
     t = 0
     total_detections = 0
     for frame in video.frames():
-        frame_detections = run(img=frame, od=od)
+        _, _, frame_detections = run(img=frame, od=od)
         total_detections += frame_detections
         t = time.time() - start
         log_metrics(t, num_frames, frame_detections, total_detections)
