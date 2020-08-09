@@ -5,6 +5,8 @@
 cd /tmp
 git clone https://github.com/tensorflow/tensorflow.git
 cd /tmp/tensorflow
+git checkout master
+# git checkout r2.3
 tensorflow/tools/ci_build/ci_build.sh PI-PYTHON37 \
     tensorflow/tools/ci_build/pi/build_raspberry_pi.sh
 
