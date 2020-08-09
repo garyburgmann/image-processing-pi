@@ -9,10 +9,10 @@ RUN apt-get update && apt-get install -y \
     curl \
     git \
     cmake \
-    make \
+    make
     # python3-dev \
     # python3-pip \
-    python3-numpy
+    # python3-numpy
 
 RUN pip install --upgrade pip setuptools
 WORKDIR /tmp
