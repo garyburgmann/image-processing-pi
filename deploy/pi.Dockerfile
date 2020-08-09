@@ -1,7 +1,4 @@
-# FROM arm32v7/ubuntu:20.04
 FROM arm32v7/python:3.7-buster
-
-ENV TF_WHEEL tensorflow-2.3.0-cp35-none-linux_armv7l.whl
 
 RUN apt-get update && apt-get install -y \
     libhdf5-dev \
