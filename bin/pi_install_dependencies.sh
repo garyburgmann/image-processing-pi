@@ -9,9 +9,6 @@ apt-get update && apt-get install -y \
     curl \
     make \
     gcc \
-    # libjasper-dev \
-    # libqtgui4 \
-    # libqt4-test \
     build-essential \
     pkg-config \
     python3-dev \
