@@ -1,2 +1,2 @@
 -r dev.requirements.txt
-opencv-python==4.3.0.36
+# opencv-python==4.3.0.36
