@@ -77,8 +77,48 @@ def parse_args():
     )
     parser.add_argument(
         '-m',
+        '--model_path',
         type=str,
-        help='path to model'
+        help='path to model',
+        default='/tmp/detect.tflite'
+    )
+    parser.add_argument(
+        '-l',
+        '--labels_path',
+        type=str,
+        help='path to labels for model',
+        default='/tmp/labels_corrected.txt'
+    )
+    parser.add_argument(
+        '-t',
+        '--target_label',
+        type=str,
+        help='target labels',
+        default='person'
+    )
+    parser.add_argument(
+        '-c',
+        '--confidence',
+        type=float,
+        help='confidence threshold',
+        default=0.51
+    )
+    parser.add_argument(
+        '-n',
+        '--num_threads',
+        type=int,
+        help='number of threads for processing',
+        default=4
+    )
+    parser.add_argument(
+        '--lite',
+        action='store_true',
+        help='flag to use tflite model',
+    )
+    parser.add_argument(
+        '--live',
+        action='store_true',
+        help='capture live video feed',
     )
     return parser.parse_args()
 
@@ -87,16 +127,11 @@ def get_video_source(args):
     """ load pre-captured video or use pi camera as source """
     if args.v:
         return PreCapturedVideo(args.v)
+    elif args.live:
+        raise NotImplementedError('Camera not connected yet')
+        # return LiveCaptureVideo()
     else:
         raise ValueError('Missing argument for video path')
-    #     video = LiveCaptureVideo
-
-
-def get_model_source(args):
-    """ load tf lite model source, default /tmp/detect.tflite """
-    if args.m:
-        return args.m
-    return '/tmp/detect.tflite'
 
 
 def log_metrics(t: int, n_frames: int, f_detections: int, t_detections: int):
@@ -112,10 +147,21 @@ def log_metrics(t: int, n_frames: int, f_detections: int, t_detections: int):
 
 if __name__ == '__main__':
     args = parse_args()
-    video = get_video_source(args)
-    model_path = get_model_source(args)
 
-    od = ObjectDetection(interpreter_path=model_path)
+    video = get_video_source(args)
+
+    print(args)
+    # all args have defaults
+    od = ObjectDetection(
+        model_path=args.model_path,
+        labels_path=args.labels_path,
+        target_label=args.target_label,
+        threshold=args.confidence,
+        tflite_runtime=args.lite,
+        num_threads=args.num_threads
+    )
+
+    # print(args)
 
     start = time.time()
     num_frames = 1

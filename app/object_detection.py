@@ -11,31 +11,38 @@ import numpy as np
 # import picamera
 from PIL import Image
 try:
-    import tflite_runtime.interpreter as tflite
-except Exception as _:
     import tensorflow as tf
+except Exception as e:
+    print(e)
+try:
+    import tflite_runtime.interpreter as tflite
+except Exception as e:
+    print(e)
 
 
 class ObjectDetection:
     _input_details: None
     _output_details: None
-    _model_download_script = './download_model.sh'
 
     def __init__(
         self,
-        interpreter_path: str = '/tmp/detect.tflite',
+        model_path: str = '/tmp/detect.tflite',
         labels_path: str = '/tmp/labels_corrected.txt',
         target_label: str = 'person',
-        threshold: float = 0.51
+        threshold: float = 0.51,
+        tflite_runtime: bool = False,
+        num_threads: int = 4
     ):
         """ ObjectDetection constructor
 
-        interpreter_path: path to .tflite file
+        model_path: path to .tflite file
         """
-        self._interpreter_path = interpreter_path
+        self._model_path = model_path
         self._labels_path = labels_path
         self._target_label = target_label
         self._threshold = threshold
+        self._tflite_runtime = tflite_runtime
+        self._num_threads = num_threads
         self._validate_interpreter_and_labels_paths()
         self._interpreter = self._bootstrap_interpreter()
         self._prepare_interpreter()
@@ -43,21 +50,23 @@ class ObjectDetection:
 
     def _validate_interpreter_and_labels_paths(self) -> None:
         if not (
-            os.path.exists(self._interpreter_path)
-            and os.path.exists(self._labels_path)
-        ):
-            _ = subprocess.call(self._model_download_script, shell=True)
-        if not (
-            os.path.exists(self._interpreter_path)
+            os.path.exists(self._model_path)
             and os.path.exists(self._labels_path)
         ):
             raise Exception('missing interpeter and/or labels')
 
     def _bootstrap_interpreter(self):
-        try:
-            return tflite.Interpreter(self._interpreter_path, num_threads=4)
-        except Exception as _:
-            return tf.lite.Interpreter(self._interpreter_path, num_threads=4)
+        """ choose tf.lite submodule or flite_runtime """
+        if self._tflite_runtime:
+            return tflite.Interpreter(
+                self._model_path,
+                num_threads=self._num_threads
+            )
+        else:
+            return tf.lite.Interpreter(
+                self._model_path,
+                num_threads=self._num_threads
+            )
 
     def _prepare_interpreter(self) -> None:
         # https://www.tensorflow.org/lite/guide/inference
