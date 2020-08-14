@@ -10,7 +10,10 @@ from typing import List, Dict
 import numpy as np
 # import picamera
 from PIL import Image
-import tensorflow as tf
+try:
+    import tflite_runtime.interpreter as tflite
+except Exception as _:
+    import tensorflow as tf
 
 
 class ObjectDetection:
@@ -50,8 +53,11 @@ class ObjectDetection:
         ):
             raise Exception('missing interpeter and/or labels')
 
-    def _bootstrap_interpreter(self) -> tf.lite.Interpreter:
-        return tf.lite.Interpreter(self._interpreter_path)
+    def _bootstrap_interpreter(self):
+        try:
+            return tflite.Interpreter(self._interpreter_path, num_threads=4)
+        except Exception as _:
+            return tf.lite.Interpreter(self._interpreter_path, num_threads=4)
 
     def _prepare_interpreter(self) -> None:
         # https://www.tensorflow.org/lite/guide/inference

@@ -1,3 +1,4 @@
+#! /usr/bin/env python3
 """ module to use ObjectDetection class with pre-captured video files """
 import time
 import os
@@ -10,8 +11,8 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from app.object_detection import ObjectDetection
-from app.pre_captured_video import PreCapturedVideo
+from object_detection import ObjectDetection
+from pre_captured_video import PreCapturedVideo
 # from app.live_capture_video import LiveCaptureVideo
 
 
