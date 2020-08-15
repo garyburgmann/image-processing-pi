@@ -1,6 +1,7 @@
 #! /usr/bin/env bash
 # run as root
 apt-get update && apt-get install -y \
+    vim \
     swig \
     libjpeg-dev \
     zlib1g-dev \
