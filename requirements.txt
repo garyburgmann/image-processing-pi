@@ -1,5 +1,5 @@
 numpy>=1.18.0,<1.19
-opencv-python>=4.1,<4.2
+opencv-contrib-python<4.4
 Pillow>=7.2.0,<7.3
 requests>=2.24.0,<2.25
 scikit-image>=0.17.2,<0.18
