@@ -13,7 +13,6 @@ from PIL import Image
 
 from object_detection import ObjectDetection
 from pre_captured_video import PreCapturedVideo
-# from app.live_capture_video import LiveCaptureVideo
 
 
 def run(img: Image.Image, od=ObjectDetection) -> int:
@@ -128,8 +127,9 @@ def get_video_source(args):
     if args.v:
         return PreCapturedVideo(args.v)
     elif args.live:
-        raise NotImplementedError('Camera not connected yet')
-        # return LiveCaptureVideo()
+        from live_capture_video import LiveCaptureVideo
+        # raise NotImplementedError('Camera not connected yet')
+        return LiveCaptureVideo()
     else:
         raise ValueError('Missing argument for video path')
 

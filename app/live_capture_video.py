@@ -2,6 +2,7 @@
 from typing import Generator
 import io
 
+from PIL import Image
 import picamera
 
 
