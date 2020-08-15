@@ -1,5 +1,5 @@
 #! /usr/bin/env bash
-VENV_DIR=/tmp
+VENV_DIR=${PWD}
 VENV=${VENV_DIR}/.venv
 
 python3 -m venv ${VENV} --clear

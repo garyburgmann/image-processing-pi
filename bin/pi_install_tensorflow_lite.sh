@@ -1,5 +1,5 @@
 #! /usr/bin/env bash
-VENV_DIR=/tmp
+VENV_DIR=${PWD}
 VENV=${VENV_DIR}/.venv
 cd /tmp
 wget https://github.com/PINTO0309/TensorflowLite-bin/raw/master/2.3.0/download_tflite_runtime-2.3.0-py3-none-linux_armv7l.whl.sh
