@@ -5,35 +5,39 @@ import os
 import argparse
 import json
 import copy
-from typing import List, Any
+from typing import List, Any, Tuple, Dict
 
 import cv2
 import numpy as np
 from PIL import Image
+import requests
 
 from app.object_detection import ObjectDetection
 from app.pre_captured_video import PreCapturedVideo
 
 
-def run(img: Image.Image, od: ObjectDetection, display: bool) -> int:
+def run(
+    img: np.ndarray,
+    od: ObjectDetection,
+    display: bool
+) -> Tuple[List[Dict], int]:
     res = od.exec(img)
 
     bbox_list = []
     conf_list = []
 
-    np_img = display_boxes(img, res, display)
+    img, res = display_boxes(img, res, display)
 
-    return np_img, res, len(res)
+    return res, len(res)
 
 
 def display_boxes(
-    img: Image.Image,
-    res: List[Any],
+    img: np.ndarray,
+    res: List[Dict],
     display_frame: bool = False
 ) -> np.ndarray:
     if res:
-        np_img = np.array(img)
-        CAMERA_HEIGHT, CAMERA_WIDTH = np_img.shape[:2]
+        CAMERA_HEIGHT, CAMERA_WIDTH = img.shape[:2]
         # CAMERA_HEIGHT, CAMERA_WIDTH = img.size
         for bbox in res:
             ymin, xmin, ymax, xmax = bbox['bounding_box']
@@ -51,7 +55,7 @@ def display_boxes(
             if display_frame:
                 # draw bounding box
                 cv2.rectangle(
-                    np_img,
+                    img,
                     (xmin, ymin),
                     (xmax, ymax),
                     (125, 255, 51),
@@ -59,7 +63,7 @@ def display_boxes(
                 )
                 # draw label above bounding box
                 cv2.putText(
-                    np_img,
+                    img,
                     f'{label.capitalize()} | {confidence:.2f}',
                     (xmin, ymin - 20),
                     cv2.FONT_HERSHEY_COMPLEX,
@@ -69,9 +73,9 @@ def display_boxes(
                 )
 
     if display_frame:
-        cv2.imshow('img', np_img[:, :, ::-1])
+        cv2.imshow('img', img[:, :, ::-1])
 
-    return np_img
+    return img, res
 
 
 def parse_args():
@@ -152,7 +156,7 @@ def log_metrics(
     n_frames: int,
     f_detections: int,
     t_detections: int,
-    r: List[Any]
+    r: List[Dict]
 ):
     # TODO: use logging
     print(
@@ -170,7 +174,7 @@ if __name__ == '__main__':
 
     video = get_video_source(args)
 
-    print(args)
+    # print(args)
     # all args have defaults
     od = ObjectDetection(
         model_path=args.model_path,
@@ -180,8 +184,6 @@ if __name__ == '__main__':
         tflite_runtime=args.lite,
         num_threads=args.num_threads
     )
-
-    # print(args)
 
     start = time.time()
     num_frames = 1
@@ -193,11 +195,17 @@ if __name__ == '__main__':
             # skip a detection if a previous frame was zero
             previous_zero = False
         else:
-            _, results, frame_detections = \
+            results, frame_detections = \
                 run(img=frame, od=od, display=args.display)
             total_detections += frame_detections
             if frame_detections == 0:
                 previous_zero = True
             t = time.time() - start
-            log_metrics(t, num_frames, frame_detections, total_detections, results)
+            log_metrics(
+                t,
+                num_frames,
+                frame_detections,
+                total_detections,
+                results
+            )
             num_frames += 1

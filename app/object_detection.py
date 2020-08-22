@@ -120,33 +120,23 @@ class ObjectDetection:
 
         results = [
             {
-                'bounding_box': boxes[i],
+                'bounding_box': boxes[i].tolist(),
                 'class': self._labels[classes[i]].lower(),
-                'score': scores[i]
+                'score': float(scores[i])
             }
             for i in range(count)
             if self._target_label.lower()
             in [self._labels[classes[i]].lower(), '__all__']
             and scores[i] >= self._threshold
         ]
-        # for i in range(count):
-        #     label = self._labels[classes[i]].lower()
-        #     target = self._target_label.lower()
-        #     valid_label = target in [label, '__all__']
-        #     if scores[i] >= self._threshold and valid_label:
-        #         result = {
-        #             'bounding_box': boxes[i],
-        #             'class': label,
-        #             'score': scores[i]
-        #         }
-        #         results.append(result)
         return results
 
-    def _resize_image(self, img: Image.Image) -> Image.Image:
+    def _resize_image(self, img: np.ndarray) -> Image.Image:
+        image = Image.fromarray(img)
         _, input_height, input_width, _ = self._input_details[0]['shape']
-        return img.resize((input_width, input_height), Image.ANTIALIAS)
+        return image.resize((input_width, input_height), Image.ANTIALIAS)
 
-    def exec(self, img: Image.Image) -> List[Dict]:
+    def exec(self, img: np.ndarray) -> List[Dict]:
         try:
             image = self._resize_image(img)
             # start_time = time.monotonic()
