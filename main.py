@@ -13,33 +13,26 @@ from PIL import Image
 import requests
 
 from app.object_detection import ObjectDetection
-from app.pre_captured_video import PreCapturedVideo
+from app.opencv_video_capture import OpenCVVideoCapture
 
 
-def run(
+def run_classifier(
     img: np.ndarray,
-    od: ObjectDetection,
-    display: bool
+    clf: ObjectDetection
 ) -> Tuple[List[Dict], int]:
-    res = od.exec(img)
+    """ run_classifier then return result & number of detections """
+    result = clf.exec(img)
+    rescaled_result = rescale_image(img, result)
 
-    bbox_list = []
-    conf_list = []
-
-    img, res = display_boxes(img, res, display)
-
-    return res, len(res)
+    return rescaled_result, len(rescaled_result)
 
 
-def display_boxes(
-    img: np.ndarray,
-    res: List[Dict],
-    display_frame: bool = False
-) -> np.ndarray:
-    if res:
+def rescale_image(img: np.ndarray, result: List[Dict]) -> List[Dict]:
+    """ use frame's original shape to restore aspect ratio """
+    if result:
         CAMERA_HEIGHT, CAMERA_WIDTH = img.shape[:2]
         # CAMERA_HEIGHT, CAMERA_WIDTH = img.size
-        for bbox in res:
+        for bbox in result:
             ymin, xmin, ymax, xmax = bbox['bounding_box']
 
             xmin = int(xmin * CAMERA_WIDTH)
@@ -48,34 +41,70 @@ def display_boxes(
             ymax = int(ymax * CAMERA_HEIGHT)
 
             bbox['bounding_box'] = [ymin, xmin, ymax, xmax]
+    return result
 
-            confidence = bbox['score']
-            label = bbox['class']
 
-            if display_frame:
-                # draw bounding box
-                cv2.rectangle(
-                    img,
-                    (xmin, ymin),
-                    (xmax, ymax),
-                    (125, 255, 51),
-                    2
-                )
-                # draw label above bounding box
-                cv2.putText(
-                    img,
-                    f'{label.capitalize()} | {confidence:.2f}',
-                    (xmin, ymin - 20),
-                    cv2.FONT_HERSHEY_COMPLEX,
-                    0.5,
-                    (0, 255, 0),
-                    2
-                )
+def draw_boxes(
+    img: np.ndarray,
+    res: List[Dict],
+) -> np.ndarray:
+    """ use opencv to paint bounding boxes on original image """
+    for bbox in res:
+        ymin, xmin, ymax, xmax = bbox['bounding_box']
+        confidence = bbox['score']
+        label = bbox['class']
 
-    if display_frame:
-        cv2.imshow('img', img[:, :, ::-1])
+        # draw bounding box
+        cv2.rectangle(
+            img,
+            (xmin, ymin),
+            (xmax, ymax),
+            (125, 255, 51),
+            2
+        )
+        # draw label above bounding box
+        cv2.putText(
+            img,
+            f'{label.capitalize()} | {confidence:.2f}',
+            (xmin, ymin - 20),
+            cv2.FONT_HERSHEY_COMPLEX,
+            0.5,
+            (0, 255, 0),
+            2
+        )
 
-    return img, res
+    return img
+
+
+def get_video_source(args):
+    """ load pre-captured video or use camera as source """
+    if args.v:
+        return OpenCVVideoCapture(video_path=args.v)
+    elif args.live:
+        # raise NotImplementedError('Camera not connected yet')
+        # from app.live_capture_video import LiveCaptureVideo
+        # return LiveCaptureVideo()
+        return OpenCVVideoCapture(live=args.live, camera=args.camera)
+    else:
+        raise ValueError('Missing argument for video path')
+
+
+def log_metrics(
+    t: int,
+    n_frames: int,
+    f_detections: int,
+    t_detections: int,
+    r: List[Dict]
+):
+    # TODO: use logging module
+    print(
+        f'Time: {int(t)}, '
+        f'Frames: {n_frames}, '
+        f'FPS: {int(n_frames/t)}, '
+        f'Frame Detections: {f_detections}, '
+        f'N: {t_detections}',
+        f"Boxes: {[x['bounding_box'] for x in r]}\n\n"
+    )
 
 
 def parse_args():
@@ -121,6 +150,12 @@ def parse_args():
         default=4
     )
     parser.add_argument(
+        '--camera',
+        type=int,
+        help='number of threads for processing',
+        default=0
+    )
+    parser.add_argument(
         '--lite',
         action='store_true',
         help='flag to use tflite model',
@@ -139,36 +174,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_video_source(args):
-    """ load pre-captured video or use pi camera as source """
-    if args.v:
-        return PreCapturedVideo(args.v)
-    elif args.live:
-        from app.live_capture_video import LiveCaptureVideo
-        # raise NotImplementedError('Camera not connected yet')
-        return LiveCaptureVideo()
-    else:
-        raise ValueError('Missing argument for video path')
-
-
-def log_metrics(
-    t: int,
-    n_frames: int,
-    f_detections: int,
-    t_detections: int,
-    r: List[Dict]
-):
-    # TODO: use logging
-    print(
-        f'Time: {int(t)}, '
-        f'Frames: {n_frames}, '
-        f'FPS: {int(n_frames/t)}, '
-        f'Frame Detections: {f_detections}, '
-        f'N: {t_detections}',
-        f"Boxes: {[x['bounding_box'] for x in r]}\n\n"
-    )
-
-
 if __name__ == '__main__':
     args = parse_args()
 
@@ -176,7 +181,7 @@ if __name__ == '__main__':
 
     # print(args)
     # all args have defaults
-    od = ObjectDetection(
+    clf = ObjectDetection(
         model_path=args.model_path,
         labels_path=args.labels_path,
         target_label=args.target_label,
@@ -191,21 +196,27 @@ if __name__ == '__main__':
     total_detections = 0
     previous_zero = False
     for frame in video.frames():
-        if previous_zero:
-            # skip a detection if a previous frame was zero
-            previous_zero = False
-        else:
-            results, frame_detections = \
-                run(img=frame, od=od, display=args.display)
-            total_detections += frame_detections
-            if frame_detections == 0:
-                previous_zero = True
-            t = time.time() - start
-            log_metrics(
-                t,
-                num_frames,
-                frame_detections,
-                total_detections,
-                results
-            )
-            num_frames += 1
+        # if previous_zero:
+        #     # skip a detection if a previous frame was zero
+        #     previous_zero = False
+        # else:
+        results, num_boxes = run_classifier(img=frame, clf=clf)
+
+        if args.display:
+            frame = draw_boxes(frame, results)
+
+        if args.display:
+            cv2.imshow('frame', frame[:, :, ::-1])
+
+        total_detections += num_boxes
+        # if num_boxes == 0:
+        #     previous_zero = True
+        t = time.time() - start
+        log_metrics(
+            t,
+            num_frames,
+            num_boxes,
+            total_detections,
+            results
+        )
+        num_frames += 1

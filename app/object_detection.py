@@ -120,9 +120,9 @@ class ObjectDetection:
 
         results = [
             {
-                'bounding_box': boxes[i].tolist(),
+                'bounding_box': boxes[i],
                 'class': self._labels[classes[i]].lower(),
-                'score': float(scores[i])
+                'score': scores[i]
             }
             for i in range(count)
             if self._target_label.lower()
