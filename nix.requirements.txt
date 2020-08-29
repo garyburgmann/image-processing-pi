@@ -1,2 +1,2 @@
 -r dev.requirements.txt
-# opencv-python>=4.4,<4.5
+opencv-contrib-python>=4.4,<4.5

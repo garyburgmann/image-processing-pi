@@ -1,5 +1,5 @@
-numpy>=1.18.0,<1.19
-opencv-contrib-python==4.1.0.25
+numpy>=1.19,<1.20
+# opencv-contrib-python==4.1.0.25
 Pillow>=7.2.0,<7.3
 requests>=2.24.0,<2.25
 scikit-image>=0.17.2,<0.18
