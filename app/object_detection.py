@@ -121,6 +121,7 @@ class ObjectDetection:
         results = [
             {
                 'bounding_box': boxes[i],
+                'class_id': classes[i],
                 'class': self._labels[classes[i]].lower(),
                 'score': scores[i]
             }

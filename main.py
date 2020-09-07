@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """ module to use ObjectDetection class with pre-captured video files """
 import time
+from typing import List, Dict
+
+import cv2
 
 from app.utils import (
     run_classifier,
@@ -10,6 +13,7 @@ from app.utils import (
     log_metrics,
     parse_args,
     get_classifier,
+    dump_results
 )
 from app.config import (
     FLASK_SERVER,
@@ -34,6 +38,7 @@ if __name__ == '__main__':
     t = 0
     total_detections = 0
     previous_zero = False
+    all_results: List[List[Dict]] = []
     for frame in video.frames():
         # if previous_zero:
         #     # skip a detection if a previous frame was zero
@@ -42,17 +47,19 @@ if __name__ == '__main__':
 
         # send_via_socket(frame, num_frames)
 
-        res = requests.post(
-            f'{FLASK_SERVER}:{FLASK_PORT}/{FLASK_ENDPOINT}',
-            data=pickle.dumps(frame)
-        )
-        res.raise_for_status()
-        results, num_boxes = pickle.loads(res.content)
+        # res = requests.post(
+        #     f'{FLASK_SERVER}:{FLASK_PORT}/{FLASK_ENDPOINT}',
+        #     data=pickle.dumps(frame)
+        # )
+        # res.raise_for_status()
+        # results, num_boxes = pickle.loads(res.content)
 
-        # results, num_boxes = run_classifier(img=frame, clf=clf)
+        results, num_boxes = run_classifier(img=frame, clf=clf)
 
         # print('results, num_boxes: ', results, num_boxes)
-        # # results, num_boxes = run_classifier(img=frame, clf=clf)
+
+        # 2 dimensional by design
+        all_results.append(results)
 
         if args.display:
             frame = draw_boxes(frame, results)
@@ -72,3 +79,6 @@ if __name__ == '__main__':
             results
         )
         num_frames += 1
+
+    dump_results(all_results, args.out)
+    print(f'results written to: {args.out}')

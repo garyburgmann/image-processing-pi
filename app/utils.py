@@ -31,10 +31,10 @@ def rescale_image(img: np.ndarray, result: List[Dict]) -> List[Dict]:
         for bbox in result:
             ymin, xmin, ymax, xmax = bbox['bounding_box']
 
-            xmin = int(xmin * CAMERA_WIDTH)
-            xmax = int(xmax * CAMERA_WIDTH)
-            ymin = int(ymin * CAMERA_HEIGHT)
-            ymax = int(ymax * CAMERA_HEIGHT)
+            xmin = xmin * CAMERA_WIDTH
+            xmax = xmax * CAMERA_WIDTH
+            ymin = ymin * CAMERA_HEIGHT
+            ymax = ymax * CAMERA_HEIGHT
 
             bbox['bounding_box'] = [ymin, xmin, ymax, xmax]
     return result
@@ -46,7 +46,7 @@ def draw_boxes(
 ) -> np.ndarray:
     """ use opencv to paint bounding boxes on original image """
     for bbox in res:
-        ymin, xmin, ymax, xmax = bbox['bounding_box']
+        ymin, xmin, ymax, xmax = [int(x) for x in bbox['bounding_box']]
         confidence = bbox['score']
         label = bbox['class']
 
@@ -167,6 +167,13 @@ def parse_args():
         action='store_true',
         help='show modified images',
     )
+    parser.add_argument(
+        '-o',
+        '--out',
+        type=str,
+        help='output text file in MOT format',
+        default='/tmp/out.txt'
+    )
     return parser.parse_args()
 
 
@@ -180,3 +187,40 @@ def get_classifier(args) -> ObjectDetection:
         tflite_runtime=args.lite,
         num_threads=args.num_threads
     )
+
+
+def create_bbox_dump(frame_idx: int, bbox_idx: int, bbox: Dict) -> str:
+    """
+    turn classifier output into:
+    <frame>, <id>, <bb_left>, <bb_top>, <bb_width>, <bb_height>, <conf>,
+    <x>, <y>, <z>
+
+    gt.txt appears to use int for:
+    <bb_left>, <bb_top>, <bb_width>, <bb_height>
+    examples from docs however format these to 3 decimal places:
+    <bb_left>, <bb_top>, <bb_width>, <bb_height>, <conf>
+    """
+    ymin, xmin, ymax, xmax = bbox['bounding_box']
+
+    return (
+        f"{frame_idx}, "
+        f"{bbox_idx}, ",  # f"{bbox['class_id']}, "
+        f"{xmin:.3f}, "
+        f"{ymin:.3f}, "
+        f"{(xmax - xmin):.3f}, "
+        f"{(ymax - ymin):.3f}, "
+        f"{bbox['score']:.3f}, "
+        "-1, -1, -1"  # <x>, <y>, <z>
+    )
+
+
+def dump_results(all_results: List[List[Dict]], to_file: str) -> None:
+    """
+    write out .txt file in format defined by MOT Challenge
+    <frame>, <id>, <bb_left>, <bb_top>, <bb_width>, <bb_height>, <conf>,
+    <x>, <y>, <z>
+    """
+    with open(to_file, 'w+') as f:
+        for frame_idx, frame in enumerate(all_results, start=1):
+            for bbox_idx, bbox in enumerate(frame, start=1):
+                f.write(f"{create_bbox_dump(frame_idx, bbox_idx, bbox)}\n")
