@@ -10,6 +10,7 @@ from PIL import Image
 
 from app.object_detection import ObjectDetection
 from app.opencv_video_capture import OpenCVVideoCapture
+from app.opencv_mot_loop import OpenCVMOTLoop
 
 
 def run_classifier(
@@ -61,7 +62,7 @@ def draw_boxes(
         # draw label above bounding box
         cv2.putText(
             img,
-            f'{label.capitalize()} | {confidence:.2f}',
+            f'{label} | {confidence:.2f}',
             (xmin, ymin - 20),
             cv2.FONT_HERSHEY_COMPLEX,
             0.5,
@@ -75,7 +76,8 @@ def draw_boxes(
 def get_video_source(args):
     """ load pre-captured video or use camera as source """
     if args.v:
-        return OpenCVVideoCapture(video_path=args.v)
+        # return OpenCVVideoCapture(video_path=args.v)
+        return OpenCVMOTLoop(dataset_dir=args.v)
     elif args.live:
         # raise NotImplementedError('Camera not connected yet')
         # from app.live_capture_video import LiveCaptureVideo
@@ -103,7 +105,7 @@ def log_metrics(
     )
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description='Run object detection')
     parser.add_argument(
         '-v',
@@ -125,15 +127,14 @@ def parse_args():
         default='/tmp/labels_corrected.txt'
     )
     parser.add_argument(
-        '-t',
-        '--target_label',
+        '--target',
         type=str,
-        help='target labels',
+        help='target label',
         default='person'
     )
     parser.add_argument(
-        '-c',
-        '--confidence',
+        '-t',
+        '--threshold',
         type=float,
         help='confidence threshold',
         default=0.51
@@ -174,6 +175,12 @@ def parse_args():
         help='output text file in MOT format',
         default='/tmp/out.txt'
     )
+    parser.add_argument(
+        '-q',
+        '--quiet',
+        action='store_true',
+        help='less output to console'
+    )
     return parser.parse_args()
 
 
@@ -182,8 +189,8 @@ def get_classifier(args) -> ObjectDetection:
     return ObjectDetection(
         model_path=args.model_path,
         labels_path=args.labels_path,
-        target_label=args.target_label,
-        threshold=args.confidence,
+        target_label=args.target,
+        threshold=args.threshold,
         tflite_runtime=args.lite,
         num_threads=args.num_threads
     )
@@ -203,14 +210,14 @@ def create_bbox_dump(frame_idx: int, bbox_idx: int, bbox: Dict) -> str:
     ymin, xmin, ymax, xmax = bbox['bounding_box']
 
     return (
-        f"{frame_idx}, "
-        f"{bbox_idx}, ",  # f"{bbox['class_id']}, "
-        f"{xmin:.3f}, "
-        f"{ymin:.3f}, "
-        f"{(xmax - xmin):.3f}, "
-        f"{(ymax - ymin):.3f}, "
-        f"{bbox['score']:.3f}, "
-        "-1, -1, -1"  # <x>, <y>, <z>
+        f"{frame_idx},"
+        "-1,"  # ,f"{bbox_idx}," # f"{bbox['class_id']}, "
+        f"{xmin:.3f},"
+        f"{ymin:.3f},"
+        f"{(xmax - xmin):.3f},"
+        f"{(ymax - ymin):.3f},"
+        f"{bbox['score']:.3f},"
+        "-1,-1,-1"  # <x>, <y>, <z>
     )
 
 
@@ -224,3 +231,4 @@ def dump_results(all_results: List[List[Dict]], to_file: str) -> None:
         for frame_idx, frame in enumerate(all_results, start=1):
             for bbox_idx, bbox in enumerate(frame, start=1):
                 f.write(f"{create_bbox_dump(frame_idx, bbox_idx, bbox)}\n")
+        print(f'results written to: {to_file}')
