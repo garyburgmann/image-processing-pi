@@ -13,3 +13,7 @@ DEFAULT_ARGS = SimpleNamespace(
     num_threads=4,
     camera=0
 )
+CLASSIFIER_INPUT_SHAPE = SimpleNamespace(
+    width=300,
+    height=300
+)    

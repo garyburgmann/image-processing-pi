@@ -20,9 +20,9 @@ def run_classifier(
 ) -> Tuple[List[Dict], int]:
     """ run_classifier then return result & number of detections """
     result = clf.exec(img)
-    rescaled_result = rescale_image(img, result)
+    # rescaled_result = rescale_image(img, result)
 
-    return rescaled_result, len(rescaled_result)
+    return result, len(result)
 
 
 def rescale_image(img: np.ndarray, result: List[Dict]) -> List[Dict]:

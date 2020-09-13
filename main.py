@@ -2,6 +2,7 @@
 """ module to use ObjectDetection class with pre-captured video files """
 import time
 from typing import List, Dict
+from concurrent.futures import ThreadPoolExecutor
 
 import cv2
 
@@ -13,12 +14,13 @@ from app.utils import (
     log_metrics,
     parse_args,
     get_classifier,
-    dump_results
+    dump_results,
 )
 from app.config import (
     FLASK_SERVER,
     FLASK_PORT,
-    FLASK_ENDPOINT
+    FLASK_ENDPOINT,
+    CLASSIFIER_INPUT_SHAPE
 )
 
 
@@ -39,6 +41,7 @@ if __name__ == '__main__':
     total_detections = 0
     previous_zero = False
     all_results: List[List[Dict]] = []
+    executor = ThreadPoolExecutor(max_workers=2)
     for frame in video.frames():
         num_frames += 1
         # if previous_zero:
@@ -46,8 +49,16 @@ if __name__ == '__main__':
         #     previous_zero = False
         # else:
 
-        # send_via_socket(frame, num_frames)
+        inference = time.time()
 
+        # print('frame.shape: ', frame.shape)
+        input_frame = cv2.resize(
+            frame,
+            (CLASSIFIER_INPUT_SHAPE.height, CLASSIFIER_INPUT_SHAPE.width)
+        )
+        print('input_frame.shape: ', input_frame.shape)
+
+        # classify via api
         # res = requests.post(
         #     f'{FLASK_SERVER}:{FLASK_PORT}/{FLASK_ENDPOINT}',
         #     data=pickle.dumps(frame)
@@ -55,9 +66,18 @@ if __name__ == '__main__':
         # res.raise_for_status()
         # results, num_boxes = pickle.loads(res.content)
 
-        results, num_boxes = run_classifier(img=frame, clf=clf)
-        # print('results, num_boxes: ', results, num_boxes)
+        # classify locally
+        results, num_boxes = run_classifier(img=input_frame, clf=clf)
+        
+        # classify locally threaded
+        # x = executor.submit(run_classifier, img=input_frame, clf=clf)
+        # results, num_boxes = x.result()
+        # print('x.result(): ', x.result())
 
+        print('inference time: ', time.time() - inference)
+
+        results = rescale_image(frame, results)
+        # print('results, num_boxes: ', results, num_boxes)
         # 2 dimensional by design
         all_results.append(results)
 
