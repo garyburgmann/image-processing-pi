@@ -24,6 +24,15 @@ from app.config import (
 )
 
 
+def api_classify(input_frame):
+    res = requests.post(
+        f'{FLASK_SERVER}:{FLASK_PORT}/{FLASK_ENDPOINT}',
+        data=pickle.dumps(input_frame)
+    )
+    res.raise_for_status()
+    return pickle.loads(res.content)
+
+
 if __name__ == '__main__':
     import requests
     import pickle
@@ -41,7 +50,7 @@ if __name__ == '__main__':
     total_detections = 0
     previous_zero = False
     all_results: List[List[Dict]] = []
-    executor = ThreadPoolExecutor(max_workers=2)
+    executor = ThreadPoolExecutor()
     for frame in video.frames():
         num_frames += 1
         # if previous_zero:
@@ -56,22 +65,24 @@ if __name__ == '__main__':
             frame,
             (CLASSIFIER_INPUT_SHAPE.height, CLASSIFIER_INPUT_SHAPE.width)
         )
-        print('input_frame.shape: ', input_frame.shape)
+        # print('input_frame.shape: ', input_frame.shape)
+
+        # split between api and local with threads
+        # if num_frames % 10 == 0:
+        #     x = executor.submit(api_classify, input_frame)
+        # else:
+        #     x = executor.submit(run_classifier, img=input_frame, clf=clf)
+        # results, num_boxes = x.result()
 
         # classify via api
-        # res = requests.post(
-        #     f'{FLASK_SERVER}:{FLASK_PORT}/{FLASK_ENDPOINT}',
-        #     data=pickle.dumps(frame)
-        # )
-        # res.raise_for_status()
-        # results, num_boxes = pickle.loads(res.content)
+        # results, num_boxes = api_classify(input_frame)
 
         # classify locally
-        results, num_boxes = run_classifier(img=input_frame, clf=clf)
+        # results, num_boxes = run_classifier(img=input_frame, clf=clf)
         
         # classify locally threaded
-        # x = executor.submit(run_classifier, img=input_frame, clf=clf)
-        # results, num_boxes = x.result()
+        x = executor.submit(run_classifier, img=input_frame, clf=clf)
+        results, num_boxes = x.result()
         # print('x.result(): ', x.result())
 
         print('inference time: ', time.time() - inference)
