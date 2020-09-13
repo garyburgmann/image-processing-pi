@@ -66,7 +66,9 @@ if __name__ == '__main__':
             frame = draw_boxes(frame, results)
 
         if args.display:
-            cv2.imshow(f'Frame: {num_frames}', frame[:, :, ::-1])
+            # cv2.imshow('Frame', cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+            # below is faster
+            cv2.imshow('Frame', frame[:, :, ::-1])
 
         total_detections += num_boxes
         # if num_boxes == 0:

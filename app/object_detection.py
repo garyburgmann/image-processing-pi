@@ -10,6 +10,7 @@ from typing import List, Dict
 import numpy as np
 # import picamera
 from PIL import Image
+import cv2
 try:
     import tensorflow as tf
 except Exception as e:
@@ -29,7 +30,7 @@ class ObjectDetection:
         model_path: str = '/tmp/detect.tflite',
         labels_path: str = '/tmp/labels_corrected.txt',
         target_label: str = 'person',
-        threshold: float = 0.51,
+        threshold: float = 0.21,
         tflite_runtime: bool = False,
         num_threads: int = 4
     ):
@@ -63,6 +64,7 @@ class ObjectDetection:
                 num_threads=self._num_threads
             )
         else:
+            # return tf.saved_model.load(self._model_path)    
             return tf.lite.Interpreter(
                 self._model_path,
                 num_threads=self._num_threads
@@ -104,7 +106,7 @@ class ObjectDetection:
         tensor = np.squeeze(self._interpreter.get_tensor(output_index))
         return tensor
 
-    def _detect_objects(self, image: Image) -> List[Dict]:
+    def _detect_objects(self, image: np.ndarray) -> List[Dict]:
         """
         Returns a list of detection results, each a dictionary of object
         info
@@ -132,10 +134,12 @@ class ObjectDetection:
         ]
         return results
 
-    def _resize_image(self, img: np.ndarray) -> Image.Image:
-        image = Image.fromarray(img)
+    def _resize_image(self, img: np.ndarray) -> np.ndarray:
         _, input_height, input_width, _ = self._input_details[0]['shape']
-        return image.resize((input_width, input_height), Image.ANTIALIAS)
+        # image = Image.fromarray(img)
+        # return image.resize((input_width, input_height), Image.ANTIALIAS)
+        # the below is faster than PIL.Image.Image
+        return cv2.resize(img, (input_width, input_height))
 
     def exec(self, img: np.ndarray) -> List[Dict]:
         try:

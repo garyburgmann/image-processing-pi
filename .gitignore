@@ -10,6 +10,8 @@ venv/
 # project
 models/
 *.webm
+results.txt
+out/*
 
 # python
 __pycache__/
@@ -17,3 +19,7 @@ __pycache__/
 
 # jupyter
 .ipynb_checkpoints/
+scrapbook.ipynb
+
+# misc.
+.DS_Store

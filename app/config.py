@@ -1,5 +1,5 @@
 FLASK_SERVER = 'http://localhost'  # 'http://192.168.42.174'
 FLASK_PORT = 5000
 FLASK_HOST = '0.0.0.0'
-FLASK_DEBUG = True
+FLASK_DEBUG = False
 FLASK_ENDPOINT = ''
