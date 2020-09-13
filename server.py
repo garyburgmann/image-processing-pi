@@ -13,12 +13,16 @@ from app.config import (
     FLASK_HOST,
     FLASK_PORT,
     FLASK_DEBUG,
-    FLASK_ENDPOINT
+    FLASK_ENDPOINT,
+    DEFAULT_ARGS
 )
 
 app = Flask(__name__)
 
-clf = get_classifier(parse_args())
+server_args = DEFAULT_ARGS
+server_args.lite = False
+
+clf = get_classifier(server_args)
 
 
 def classify_frame(frame: np.ndarray) -> Tuple[List[Dict], int]:

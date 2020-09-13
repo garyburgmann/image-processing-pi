@@ -11,6 +11,7 @@ from PIL import Image
 from app.object_detection import ObjectDetection
 from app.opencv_video_capture import OpenCVVideoCapture
 from app.opencv_mot_loop import OpenCVMOTLoop
+from app.config import DEFAULT_ARGS
 
 
 def run_classifier(
@@ -117,40 +118,40 @@ def parse_args() -> argparse.Namespace:
         '--model_path',
         type=str,
         help='path to model',
-        default='/tmp/detect.tflite'
+        default=DEFAULT_ARGS.model_path
     )
     parser.add_argument(
         '-l',
         '--labels_path',
         type=str,
         help='path to labels for model',
-        default='/tmp/labels_corrected.txt'
+        default=DEFAULT_ARGS.labels_path
     )
     parser.add_argument(
         '--target',
         type=str,
         help='target label',
-        default='person'
+        default=DEFAULT_ARGS.target
     )
     parser.add_argument(
         '-t',
         '--threshold',
         type=float,
         help='confidence threshold',
-        default=0.51
+        default=DEFAULT_ARGS.threshold
     )
     parser.add_argument(
         '-n',
         '--num_threads',
         type=int,
         help='number of threads for processing',
-        default=4
+        default=DEFAULT_ARGS.num_threads
     )
     parser.add_argument(
         '--camera',
         type=int,
         help='number of threads for processing',
-        default=0
+        default=DEFAULT_ARGS.camera
     )
     parser.add_argument(
         '--lite',
