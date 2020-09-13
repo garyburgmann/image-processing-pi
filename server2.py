@@ -1,8 +1,9 @@
 import pickle
 from typing import List, Tuple, Dict
+import time
 
 import numpy as np
-from flask import Flask, request, jsonify, send_file
+import falcon
 
 from app.utils import (
     parse_args,
@@ -17,7 +18,7 @@ from app.config import (
     DEFAULT_ARGS
 )
 
-app = Flask(__name__)
+api = falcon.API()
 
 server_args = DEFAULT_ARGS
 server_args.lite = False
@@ -31,18 +32,20 @@ def classify_frame(frame: np.ndarray) -> Tuple[List[Dict], int]:
     return results, num_boxes
 
 
-@app.route(f'/{FLASK_ENDPOINT}', methods=['POST'])
-def classify():
-    frame = pickle.loads(request.data)
-    results, num_boxes = classify_frame(frame)
-
-    return pickle.dumps([results, num_boxes])
+class PingResource:
+    def on_get(self, req, resp):
+        """ Handles GET request """
+        resp.media = {'message': 'pong'}
 
 
-@app.route('/ping', methods=['GET'])
-def ping():
-    return {'message': 'pong'}
+class ClassifierResource:
+    def on_post(self, req, resp):
+        """ Handles POST request """
+        body = req.stream.read()
+        frame = pickle.loads(body)
+        results, num_boxes = classify_frame(frame)
+        resp.body = pickle.dumps([results, num_boxes])
 
 
-if __name__ == '__main__':
-    app.run(host=FLASK_HOST, port=FLASK_PORT, debug=FLASK_DEBUG)
+api.add_route(f'/{FLASK_ENDPOINT}', ClassifierResource())
+api.add_route('/ping', PingResource())

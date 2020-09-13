@@ -56,7 +56,6 @@ if __name__ == '__main__':
         # results, num_boxes = pickle.loads(res.content)
 
         results, num_boxes = run_classifier(img=frame, clf=clf)
-
         # print('results, num_boxes: ', results, num_boxes)
 
         # 2 dimensional by design
