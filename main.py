@@ -18,6 +18,7 @@ from app.utils import (
     detect_api,
     descale_image
 )
+from app.tasks import detect
 
 
 if __name__ == '__main__':
@@ -29,15 +30,13 @@ if __name__ == '__main__':
     # all args have defaults
     clf = get_classifier(args)
 
-    start = time.time()
-    num_frames = 0
-    t = 0
     total_detections = 0
     previous_zero = False
     all_results: List[List[Dict]] = []
     # executor = ThreadPoolExecutor()
-    for frame in video.frames():
-        num_frames += 1
+    server_modulus = 10
+    start = time.time()
+    for frame_idx, frame in enumerate(video.frames(), 1):
         # if previous_zero:
         #     # skip a detection if a previous frame was zero
         #     previous_zero = False
@@ -50,17 +49,19 @@ if __name__ == '__main__':
         # print('input_frame.shape: ', input_frame.shape)
 
         # split between api and local with threads
-        # if num_frames % 10 == 0:
+        # if frame_idx % 10 == 0:
         #     x = executor.submit(detect_api, input_frame)
         # else:
         #     x = executor.submit(run_classifier, img=input_frame, clf=clf)
         # results, num_boxes = x.result()
 
         # classify via api
-        results, num_boxes = detect_api(input_frame)
+        # results, num_boxes = detect_api(input_frame)
+#        if frame_idx % server_modulus == 0:
+#            _ = detect.delay(input_frame, frame_idx)
 
         # classify locally
-        # results, num_boxes = run_classifier(img=input_frame, clf=clf)
+        results, num_boxes = run_classifier(img=input_frame, clf=clf)
 
         # classify locally threaded
         # x = executor.submit(run_classifier, img=input_frame, clf=clf)
@@ -85,12 +86,12 @@ if __name__ == '__main__':
         total_detections += num_boxes
         # if num_boxes == 0:
         #     previous_zero = True
-        t = time.time() - start
+        time_from_start = time.time() - start
 
         if not args.quiet:
             log_metrics(
-                t,
-                num_frames,
+                time_from_start,
+                frame_idx,
                 num_boxes,
                 total_detections,
                 results
@@ -99,9 +100,9 @@ if __name__ == '__main__':
     with open('./results.txt', 'a+') as f:
         f.write(
             f'Dataset: {args.v}, '
-            f'Time: {int(t)}, '
-            f'Frames: {num_frames}, '
-            f'FPS: {int(num_frames/t)}, '
+            f'Time: {int(time_from_start)}, '
+            f'Frames: {frame_idx}, '
+            f'FPS: {int(frame_idx/time_from_start)}, '
             f'Total Det: {total_detections}\n'
         )
     dump_results(all_results, args.out)

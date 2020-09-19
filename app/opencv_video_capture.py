@@ -17,6 +17,8 @@ class OpenCVVideoCapture:
         self._live = live
         self._camera = camera
         self._capture = self.bootstrap_capture()
+        self._capture.set(3, 640)
+        self._capture.set(4, 480)
 
     def bootstrap_capture(self) -> cv2.VideoCapture:
         if self._live:
@@ -26,6 +28,7 @@ class OpenCVVideoCapture:
 
     def frames(self) -> Generator[np.ndarray, None, None]:
         while(self._capture.isOpened()):
+	
             ret, cv2_im = self._capture.read()
             if ret is True and cv2_im.any():
                 yield cv2.cvtColor(cv2_im, cv2.COLOR_BGR2RGB)
