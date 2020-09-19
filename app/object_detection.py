@@ -8,17 +8,16 @@ import os
 from typing import List, Dict
 
 import numpy as np
-# import picamera
 from PIL import Image
 import cv2
-try:
-    import tensorflow as tf
-except Exception as e:
-    print(e)
-try:
-    import tflite_runtime.interpreter as tflite
-except Exception as e:
-    print(e)
+# try:
+#     import tensorflow as tf
+# except Exception as e:
+#     print(e)
+# try:
+#     import tflite_runtime.interpreter as tflite
+# except Exception as e:
+#     print(e)
 
 
 class ObjectDetection:
@@ -59,11 +58,13 @@ class ObjectDetection:
     def _bootstrap_interpreter(self):
         """ choose tf.lite submodule or flite_runtime """
         if self._tflite_runtime:
+            import tflite_runtime.interpreter as tflite
             return tflite.Interpreter(
                 self._model_path,
                 num_threads=self._num_threads
             )
         else:
+            import tensorflow as tf
             # return tf.saved_model.load(self._model_path)    
             return tf.lite.Interpreter(
                 self._model_path,

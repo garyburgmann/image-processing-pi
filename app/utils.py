@@ -171,6 +171,16 @@ def parse_args() -> argparse.Namespace:
         help='capture live video feed',
     )
     parser.add_argument(
+        '--api',
+        action='store_true',
+        help='classify with external api (http)',
+    )
+    parser.add_argument(
+        '--celery',
+        action='store_true',
+        help='classify with backend celery process',
+    )
+    parser.add_argument(
         '-d',
         '--display',
         action='store_true',

@@ -34,7 +34,7 @@ if __name__ == '__main__':
     previous_zero = False
     all_results: List[List[Dict]] = []
     # executor = ThreadPoolExecutor()
-    server_modulus = 10
+    server_modulus = 5
     start = time.time()
     for frame_idx, frame in enumerate(video.frames(), 1):
         # if previous_zero:
@@ -42,7 +42,7 @@ if __name__ == '__main__':
         #     previous_zero = False
         # else:
 
-        inference = time.time()
+        inference_start = time.time()
 
         # print('frame.shape: ', frame.shape)
         input_frame = descale_image(frame)
@@ -55,20 +55,22 @@ if __name__ == '__main__':
         #     x = executor.submit(run_classifier, img=input_frame, clf=clf)
         # results, num_boxes = x.result()
 
-        # classify via api
-        # results, num_boxes = detect_api(input_frame)
-#        if frame_idx % server_modulus == 0:
-#            _ = detect.delay(input_frame, frame_idx)
+        if args.api:
+            # classify via api
+            results, num_boxes = detect_api(input_frame)
+        else:
+            # classify locally
+            results, num_boxes = run_classifier(img=input_frame, clf=clf)
 
-        # classify locally
-        results, num_boxes = run_classifier(img=input_frame, clf=clf)
+        if frame_idx % server_modulus == 0 and args.celery:
+            _ = detect.delay(input_frame, frame_idx)
 
         # classify locally threaded
         # x = executor.submit(run_classifier, img=input_frame, clf=clf)
         # results, num_boxes = x.result()
         # print('x.result(): ', x.result())
 
-        print('inference time: ', time.time() - inference)
+        print('inference time: ', time.time() - inference_start)
 
         results = rescale_image(frame, results)
         # print('results, num_boxes: ', results, num_boxes)
