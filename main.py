@@ -21,8 +21,6 @@ from app.utils import (
 
 
 if __name__ == '__main__':
-    import requests
-    import pickle
     args = parse_args()
 
     video = get_video_source(args)
@@ -59,10 +57,10 @@ if __name__ == '__main__':
         # results, num_boxes = x.result()
 
         # classify via api
-        # results, num_boxes = detect_api(input_frame)
+        results, num_boxes = detect_api(input_frame)
 
         # classify locally
-        results, num_boxes = run_classifier(img=input_frame, clf=clf)
+        # results, num_boxes = run_classifier(img=input_frame, clf=clf)
 
         # classify locally threaded
         # x = executor.submit(run_classifier, img=input_frame, clf=clf)
