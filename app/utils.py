@@ -1,12 +1,13 @@
 """ module with shared helper funcs """
 import argparse
 from typing import List, Any, Tuple, Dict
-# import pickle
+import pickle
 import time
 
 import cv2
 import numpy as np
 from PIL import Image
+import requests
 
 from app.object_detection import ObjectDetection
 from app.opencv_video_capture import OpenCVVideoCapture
