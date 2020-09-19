@@ -11,7 +11,13 @@ from PIL import Image
 from app.object_detection import ObjectDetection
 from app.opencv_video_capture import OpenCVVideoCapture
 from app.opencv_mot_loop import OpenCVMOTLoop
-from app.config import DEFAULT_ARGS
+from app.config import (
+    FLASK_SERVER,
+    FLASK_PORT,
+    FLASK_ENDPOINT,
+    CLASSIFIER_INPUT_SHAPE,
+    DEFAULT_ARGS
+)
 
 
 def run_classifier(
@@ -233,3 +239,21 @@ def dump_results(all_results: List[List[Dict]], to_file: str) -> None:
             for bbox_idx, bbox in enumerate(frame, start=1):
                 f.write(f"{create_bbox_dump(frame_idx, bbox_idx, bbox)}\n")
         print(f'results written to: {to_file}')
+
+
+def detect_api(input_frame: np.ndarray) -> Tuple[List[Dict], int]:
+    """ use api for object detection """
+    res = requests.post(
+        f'{FLASK_SERVER}:{FLASK_PORT}/{FLASK_ENDPOINT}',
+        data=pickle.dumps(input_frame)
+    )
+    res.raise_for_status()
+    return pickle.loads(res.content)
+
+
+def descale_image(frame: np.ndarray) -> np.ndarray:
+    """ shrink image to size required for object detection """
+    return cv2.resize(
+        frame,
+        (CLASSIFIER_INPUT_SHAPE.height, CLASSIFIER_INPUT_SHAPE.width)
+    )

@@ -15,22 +15,9 @@ from app.utils import (
     parse_args,
     get_classifier,
     dump_results,
+    detect_api,
+    descale_image
 )
-from app.config import (
-    FLASK_SERVER,
-    FLASK_PORT,
-    FLASK_ENDPOINT,
-    CLASSIFIER_INPUT_SHAPE
-)
-
-
-def api_classify(input_frame):
-    res = requests.post(
-        f'{FLASK_SERVER}:{FLASK_PORT}/{FLASK_ENDPOINT}',
-        data=pickle.dumps(input_frame)
-    )
-    res.raise_for_status()
-    return pickle.loads(res.content)
 
 
 if __name__ == '__main__':
@@ -50,7 +37,7 @@ if __name__ == '__main__':
     total_detections = 0
     previous_zero = False
     all_results: List[List[Dict]] = []
-    executor = ThreadPoolExecutor()
+    # executor = ThreadPoolExecutor()
     for frame in video.frames():
         num_frames += 1
         # if previous_zero:
@@ -61,28 +48,25 @@ if __name__ == '__main__':
         inference = time.time()
 
         # print('frame.shape: ', frame.shape)
-        input_frame = cv2.resize(
-            frame,
-            (CLASSIFIER_INPUT_SHAPE.height, CLASSIFIER_INPUT_SHAPE.width)
-        )
+        input_frame = descale_image(frame)
         # print('input_frame.shape: ', input_frame.shape)
 
         # split between api and local with threads
         # if num_frames % 10 == 0:
-        #     x = executor.submit(api_classify, input_frame)
+        #     x = executor.submit(detect_api, input_frame)
         # else:
         #     x = executor.submit(run_classifier, img=input_frame, clf=clf)
         # results, num_boxes = x.result()
 
         # classify via api
-        # results, num_boxes = api_classify(input_frame)
+        # results, num_boxes = detect_api(input_frame)
 
         # classify locally
-        # results, num_boxes = run_classifier(img=input_frame, clf=clf)
-        
+        results, num_boxes = run_classifier(img=input_frame, clf=clf)
+
         # classify locally threaded
-        x = executor.submit(run_classifier, img=input_frame, clf=clf)
-        results, num_boxes = x.result()
+        # x = executor.submit(run_classifier, img=input_frame, clf=clf)
+        # results, num_boxes = x.result()
         # print('x.result(): ', x.result())
 
         print('inference time: ', time.time() - inference)
