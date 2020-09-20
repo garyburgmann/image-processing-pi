@@ -19,6 +19,7 @@ from app.utils import (
     descale_image
 )
 from app.tasks import detect
+from app.redis import get_redis
 
 
 if __name__ == '__main__':
@@ -26,6 +27,9 @@ if __name__ == '__main__':
 
     video = get_video_source(args)
 
+    # TODO:  this is a test, update me!
+    r = get_redis()
+    r.set('threshold', args.threshold)
     # print(args)
     # all args have defaults
     clf = get_classifier(args)
