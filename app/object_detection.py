@@ -144,7 +144,7 @@ class ObjectDetection:
 
     def exec(self, img: np.ndarray) -> List[Dict]:
         try:
-            # image = self._resize_image(img)
+            img = self._resize_image(img)
             # start_time = time.monotonic()
             results = self._detect_objects(img)
             # elapsed_ms = (time.monotonic() - start_time) * 1000

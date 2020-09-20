@@ -45,7 +45,8 @@ if __name__ == '__main__':
         inference_start = time.time()
 
         # print('frame.shape: ', frame.shape)
-        input_frame = descale_image(frame)
+        # input_frame = descale_image(frame)
+        input_frame = frame
         # print('input_frame.shape: ', input_frame.shape)
 
         # split between api and local with threads
