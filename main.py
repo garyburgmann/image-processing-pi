@@ -3,6 +3,7 @@
 import time
 from typing import List, Dict
 from concurrent.futures import ThreadPoolExecutor
+import pickle
 
 import cv2
 
@@ -29,6 +30,8 @@ if __name__ == '__main__':
 
     # TODO:  this is a test, update me!
     r = get_redis()
+    p = r.pubsub(ignore_subscribe_messages=True)
+    p.subscribe('ack')
     r.set('threshold', args.threshold)
     # print(args)
     # all args have defaults
@@ -49,9 +52,18 @@ if __name__ == '__main__':
         inference_start = time.time()
 
         # print('frame.shape: ', frame.shape)
-        # input_frame = descale_image(frame)
-        input_frame = frame
+        input_frame = descale_image(frame)
+        # input_frame = frame
         # print('input_frame.shape: ', input_frame.shape)
+
+        # TODO: remove test code
+        r.publish('det', input_frame)
+
+        msg = p.get_message()
+        while not msg:
+            msg = p.get_message()
+            if msg:
+                results, num_boxes = msg['data']
 
         # split between api and local with threads
         # if frame_idx % 10 == 0:
@@ -60,12 +72,12 @@ if __name__ == '__main__':
         #     x = executor.submit(run_classifier, img=input_frame, clf=clf)
         # results, num_boxes = x.result()
 
-        if args.api:
-            # classify via api
-            results, num_boxes = detect_api(input_frame)
-        else:
-            # classify locally
-            results, num_boxes = run_classifier(img=input_frame, clf=clf)
+        # if args.api:
+        #     # classify via api
+        #     results, num_boxes = detect_api(input_frame)
+        # else:
+        #     # classify locally
+        #     results, num_boxes = run_classifier(img=input_frame, clf=clf)
 
         if frame_idx % server_modulus == 0 and args.celery:
             _ = detect.delay(input_frame, frame_idx)
