@@ -16,10 +16,17 @@ DEFAULT_ARGS = SimpleNamespace(
 CLASSIFIER_INPUT_SHAPE = SimpleNamespace(
     width=300,
     height=300
-)    
+)
+
+REDIS = SimpleNamespace(
+    celery_broker_url='redis://localhost:6379/1',
+    host='localhost',
+    port=6379,
+    db=0
+)
 
 CELERY_CONFIG = SimpleNamespace(
-    broker_url='redis://localhost:6379/1',
+    broker_url=REDIS.celery_broker_url,
     task_serializer='pickle',
     accept_content=['pickle']
 )

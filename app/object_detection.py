@@ -10,14 +10,10 @@ from typing import List, Dict
 import numpy as np
 from PIL import Image
 import cv2
-# try:
-#     import tensorflow as tf
-# except Exception as e:
-#     print(e)
-# try:
-#     import tflite_runtime.interpreter as tflite
-# except Exception as e:
-#     print(e)
+
+from app.redis import get_redis
+
+r = get_redis()
 
 
 class ObjectDetection:
@@ -112,6 +108,11 @@ class ObjectDetection:
         Returns a list of detection results, each a dictionary of object
         info
         """
+        # TODO:  this is a test, update me!
+        t = r.get('threshold')
+        # print("r.get('threshold'): ", t)
+        self._threshold = float(t)
+
         self._set_input_tensor(image)
         self._interpreter.invoke()
 
