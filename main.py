@@ -35,7 +35,8 @@ if __name__ == '__main__':
         r.set('threshold', args.threshold)
         # print(args)
         # all args have defaults
-        clf = get_classifier(args)
+
+    clf = get_classifier(args)
 
     total_detections = 0
     previous_zero = False
@@ -56,14 +57,14 @@ if __name__ == '__main__':
         # input_frame = frame
         # print('input_frame.shape: ', input_frame.shape)
 
-        # TODO: remove test code
-        r.publish('det', input_frame)
-
-        msg = p.get_message()
-        while not msg:
+        if args.redis:
+            # TODO: remove test code
+            r.publish('det', input_frame)
             msg = p.get_message()
-            if msg:
-                results, num_boxes = msg['data']
+            while not msg:
+                msg = p.get_message()
+                if msg:
+                    results, num_boxes = msg['data']
 
         # split between api and local with threads
         # if frame_idx % 10 == 0:
@@ -72,12 +73,12 @@ if __name__ == '__main__':
         #     x = executor.submit(run_classifier, img=input_frame, clf=clf)
         # results, num_boxes = x.result()
 
-        # if args.api:
-        #     # classify via api
-        #     results, num_boxes = detect_api(input_frame)
-        # else:
-        #     # classify locally
-        #     results, num_boxes = run_classifier(img=input_frame, clf=clf)
+        if args.api:
+            # classify via api
+            results, num_boxes = detect_api(input_frame)
+        else:
+            # classify locally
+            results, num_boxes = run_classifier(img=input_frame, clf=clf)
 
         if frame_idx % server_modulus == 0 and args.celery:
             _ = detect.delay(input_frame, frame_idx)
