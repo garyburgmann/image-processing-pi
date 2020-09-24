@@ -1,7 +1,7 @@
 """ get some test images """
 import os
 
-DIR = '/Users/garyburgmann/mot_challenge/MOT17Det/train/MOT17-05/img1'
+DIR = '/home/gjb/mot_challenge/MOT17Det/train/MOT17-05/img1'
 
 images = sorted(os.listdir(DIR))
 
@@ -17,16 +17,29 @@ import time
 
 import tensorflow as tf
 
-MODEL_DIR= "../models"
-MODEL_NAME = "ssd_mobilenet_v2_fpnlite_320x320_coco17_tpu-8"
-
-PATH_TO_SAVED_MODEL = os.path.join(MODEL_DIR, MODEL_NAME, "saved_model")
-
 print('Loading model...')
 start_time = time.time()
 
+MODEL_DIR= "./models"
+MODEL_NAME = "efficientdet_d3_coco17_tpu-32"
+PATH_TO_SAVED_MODEL = os.path.join(MODEL_DIR, MODEL_NAME, "saved_model")
 # Load saved model and build the detection function
 clf = tf.saved_model.load(PATH_TO_SAVED_MODEL)
+
+# import tensorflow_hub as hub
+
+# module_handle = (
+#     "https://tfhub.dev/tensorflow/efficientdet/d3/1"
+#     # "https://tfhub.dev/tensorflow/centernet/resnet50v1_fpn_512x512/1",
+#     # "https://tfhub.dev/tensorflow/faster_rcnn/resnet101_v1_1024x1024/1"
+#     # "https://tfhub.dev/tensorflow/efficientdet/d2/1"
+#     # "https://tfhub.dev/tensorflow/centernet/hourglass_512x512/1"
+#     # "https://tfhub.dev/tensorflow/efficientdet/d7/1"
+#     # "https://tfhub.dev/tensorflow/retinanet/resnet101_v1_fpn_640x640/1"
+#     # "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"
+# ) #@param ["https://tfhub.dev/google/openimages_v4/ssd/mobilenet_v2/1", "https://tfhub.dev/google/faster_rcnn/openimages_v4/inception_resnet_v2/1"]
+
+# clf = hub.load(module_handle)
 
 end_time = time.time()
 elapsed_time = end_time - start_time
