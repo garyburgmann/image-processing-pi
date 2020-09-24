@@ -27,9 +27,11 @@ if __name__ == '__main__':
 
     video = get_video_source(args)
 
-    # TODO:  this is a test, update me!
-    r = get_redis()
-    r.set('threshold', args.threshold)
+    if args.redis:
+        # TODO:  this is a test, update me!
+        r = get_redis()
+        r.set('threshold', args.threshold)
+
     # print(args)
     # all args have defaults
     clf = get_classifier(args)

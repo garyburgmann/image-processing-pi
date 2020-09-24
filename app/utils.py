@@ -181,6 +181,11 @@ def parse_args() -> argparse.Namespace:
         help='classify with backend celery process',
     )
     parser.add_argument(
+        '--redis',
+        action='store_true',
+        help='classify with redis pub/sub',
+    )
+    parser.add_argument(
         '-d',
         '--display',
         action='store_true',
@@ -268,3 +273,8 @@ def descale_image(frame: np.ndarray) -> np.ndarray:
         frame,
         (CLASSIFIER_INPUT_SHAPE.height, CLASSIFIER_INPUT_SHAPE.width)
     )
+
+
+# def compare_section(section_id: str, min_x, min_y, max_x, max_y):
+#     pass
+

@@ -57,14 +57,14 @@ class ObjectDetection:
             import tflite_runtime.interpreter as tflite
             return tflite.Interpreter(
                 self._model_path,
-                num_threads=self._num_threads
+                # num_threads=self._num_threads
             )
         else:
             import tensorflow as tf
             # return tf.saved_model.load(self._model_path)    
             return tf.lite.Interpreter(
                 self._model_path,
-                num_threads=self._num_threads
+                # num_threads=self._num_threads
             )
 
     def _prepare_interpreter(self) -> None:
@@ -109,9 +109,9 @@ class ObjectDetection:
         info
         """
         # TODO:  this is a test, update me!
-        t = r.get('threshold')
+        # t = r.get('threshold')
         # print("r.get('threshold'): ", t)
-        self._threshold = float(t)
+        # self._threshold = float(t)
 
         self._set_input_tensor(image)
         self._interpreter.invoke()
@@ -145,7 +145,7 @@ class ObjectDetection:
 
     def exec(self, img: np.ndarray) -> List[Dict]:
         try:
-            # img = self._resize_image(img)
+            img = self._resize_image(img)
             # start_time = time.monotonic()
             results = self._detect_objects(img)
             # elapsed_ms = (time.monotonic() - start_time) * 1000
