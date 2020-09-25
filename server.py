@@ -2,47 +2,88 @@ import pickle
 from typing import List, Tuple, Dict
 
 import numpy as np
-from flask import Flask, request, jsonify, send_file
 
 from app.utils import (
     parse_args,
     get_classifier,
-    run_classifier
 )
 from app.config import (
-    FLASK_HOST,
-    FLASK_PORT,
-    FLASK_DEBUG,
-    FLASK_ENDPOINT,
-    DEFAULT_ARGS
+    APP_SERVER,
+    APP_SERVER_OPTIONS,
 )
 
-app = Flask(__name__)
-
-server_args = DEFAULT_ARGS
+# mimic args, as argparse will clash with gunicorn
+server_args = APP_SERVER.default_args
 server_args.lite = False
 
+# bootstrap here to reduce latency on each request
 clf = get_classifier(server_args)
 
 
-def classify_frame(frame: np.ndarray) -> Tuple[List[Dict], int]:
-    results, num_boxes = run_classifier(img=frame, clf=clf)
-    print(f'{__name__}: {results}, {num_boxes}')
-    return results, num_boxes
+def predict_frame(frame: np.ndarray) -> Tuple[List[Dict], int]:
+    global clf
+    res = clf.exec(frame)
+    print(f'{__name__} | res: {res}')
+    return res
 
 
-@app.route(f'/{FLASK_ENDPOINT}', methods=['POST'])
-def classify():
-    frame = pickle.loads(request.data)
-    results, num_boxes = classify_frame(frame)
+assert APP_SERVER.type in APP_SERVER_OPTIONS, '\n\ninvalid APP_SERVER.type\n\n'
 
-    return pickle.dumps([results, num_boxes])
+print(f'starting {APP_SERVER.type} server')
 
+if APP_SERVER.type == 'flask':
+    from flask import Flask, request, jsonify, send_file
 
-@app.route('/ping', methods=['GET'])
-def ping():
-    return {'message': 'pong'}
+    app = Flask(__name__)
 
 
-if __name__ == '__main__':
-    app.run(host=FLASK_HOST, port=FLASK_PORT, debug=FLASK_DEBUG)
+    @app.route('/ping', methods=['GET'])
+    def ping():
+        return {'message': 'pong'}
+
+
+    @app.route(f'/{APP_SERVER.endpoint}', methods=['POST'])
+    def predict():
+        frame = pickle.loads(request.data)
+        results = predict_frame(frame)
+
+        return pickle.dumps(results)
+
+
+    application = app
+
+    if __name__ == '__main__':
+        app.run(
+            host=APP_SERVER.host,
+            port=APP_SERVER.port,
+            debug=APP_SERVER.debug
+        )
+
+
+elif APP_SERVER.type == 'falcon':
+    import falcon
+
+    api = falcon.API()
+
+
+    class PingResource:
+        def on_get(self, req, resp):
+            """ Handles GET request """
+            resp.media = {'message': 'pong'}
+
+
+    class ClassifierResource:
+        def on_post(self, req, resp):
+            """ Handles POST request """
+            body = req.stream.read()
+            frame = pickle.loads(body)
+            results = predict_frame(frame)
+            resp.body = pickle.dumps(results)
+
+
+    api.add_route('/ping', PingResource())
+    api.add_route(f'/{APP_SERVER.endpoint}', ClassifierResource())
+
+    application = api
+
+print(f'started {APP_SERVER.type} server')

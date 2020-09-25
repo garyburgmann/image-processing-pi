@@ -2,7 +2,7 @@
 """ module to use ObjectDetection class with pre-captured video files """
 import time
 from typing import List, Dict
-from concurrent.futures import ThreadPoolExecutor
+# from concurrent.futures import ThreadPoolExecutor
 import pickle
 
 import cv2
@@ -17,7 +17,7 @@ from app.utils import (
     get_classifier,
     dump_results,
     detect_api,
-    descale_image
+    # descale_image,
 )
 from app.tasks import detect
 from app.redis import get_redis
@@ -53,8 +53,8 @@ if __name__ == '__main__':
         inference_start = time.time()
 
         # print('frame.shape: ', frame.shape)
-        input_frame = descale_image(frame)
-        # input_frame = frame
+        # input_frame = descale_image(frame)
+        input_frame = frame
         # print('input_frame.shape: ', input_frame.shape)
 
         if args.redis:
@@ -73,9 +73,9 @@ if __name__ == '__main__':
         #     x = executor.submit(run_classifier, img=input_frame, clf=clf)
         # results, num_boxes = x.result()
 
-        if args.api:
+        if args.api or args.tensorflow_serving:
             # classify via api
-            results, num_boxes = detect_api(input_frame)
+            results, num_boxes = detect_api(input_frame, args=args)
         else:
             # classify locally
             results, num_boxes = run_classifier(img=input_frame, clf=clf)

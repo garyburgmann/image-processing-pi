@@ -1,7 +1,6 @@
 """ Use TF Lite to detect objects """
 import argparse
 import io
-import re
 import time
 import subprocess
 import os
@@ -12,6 +11,7 @@ from PIL import Image
 import cv2
 
 from app.redis import get_redis
+from app.config import DEFAULT_ARGS
 
 r = get_redis()
 
@@ -27,7 +27,8 @@ class ObjectDetection:
         target_label: str = 'person',
         threshold: float = 0.21,
         tflite_runtime: bool = False,
-        num_threads: int = 4
+        num_threads: int = 4,
+        class_id_offset: int = DEFAULT_ARGS.class_id_offset
     ):
         """ ObjectDetection constructor
 
@@ -35,14 +36,15 @@ class ObjectDetection:
         """
         self._model_path = model_path
         self._labels_path = labels_path
-        self._target_label = target_label
-        self._threshold = threshold
+        self.target_label = target_label
+        self.threshold = threshold
         self._tflite_runtime = tflite_runtime
         self._num_threads = num_threads
+        self.class_id_offset = class_id_offset
         self._validate_interpreter_and_labels_paths()
         self._interpreter = self._bootstrap_interpreter()
         self._prepare_interpreter()
-        self._labels = self._load_labels()
+        self.labels = self._load_labels()
 
     def _validate_interpreter_and_labels_paths(self) -> None:
         if not (
@@ -53,18 +55,22 @@ class ObjectDetection:
 
     def _bootstrap_interpreter(self):
         """ choose tf.lite submodule or flite_runtime """
+        print(
+            __name__, '| _bootstrap_interpreter | '
+            'self._model_path:', self._model_path
+        )
         if self._tflite_runtime:
             import tflite_runtime.interpreter as tflite
             return tflite.Interpreter(
                 self._model_path,
-                # num_threads=self._num_threads
+                num_threads=self._num_threads  # TF 2.3 only - new feature
             )
         else:
             import tensorflow as tf
             # return tf.saved_model.load(self._model_path)    
             return tf.lite.Interpreter(
                 self._model_path,
-                # num_threads=self._num_threads
+                num_threads=self._num_threads  # TF 2.3 only - new feature
             )
 
     def _prepare_interpreter(self) -> None:
@@ -78,65 +84,76 @@ class ObjectDetection:
         Loads the labels file.
         Supports files with or without index numbers.
         """
-        with open(self._labels_path, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-            labels = {}
-            for row_number, content in enumerate(lines):
-                pair = re.split(r'[:\s]+', content.strip(), maxsplit=1)
-                if len(pair) == 2 and pair[0].strip().isdigit():
-                    labels[int(pair[0])] = pair[1].strip()
-                else:
-                    labels[row_number] = pair[0].strip()
-        return labels
+        from app.utils import load_labels
+        return load_labels(self._labels_path)
 
-    def _set_input_tensor(self, image: Image) -> None:
+    def _set_input_tensor(self, image: np.ndarray) -> None:
         """ Sets the input tensor. """
         tensor_index = self._input_details[0]['index']
         # A function that can return a new numpy array pointing to the internal
         # TFLite tensor state at any point.
         input_tensor = self._interpreter.tensor(tensor_index)()[0]
         input_tensor[:, :] = image
+        # self._interpreter.set_tensor(tensor_index, image)
 
     def _get_output_tensor(self, index: int) -> np.ndarray:
         """ Returns the output tensor at the given index. """
         output_index = self._output_details[index]['index']
         tensor = np.squeeze(self._interpreter.get_tensor(output_index))
         return tensor
+        # return self._interpreter.get_tensor(output_index)
+        # return self._interpreter.tensor(output_index)()
 
     def _detect_objects(self, image: np.ndarray) -> List[Dict]:
         """
         Returns a list of detection results, each a dictionary of object
         info
         """
+        # from app.utils import format_results
+
         # TODO:  this is a test, update me!
         # t = r.get('threshold')
         # print("r.get('threshold'): ", t)
-        # self._threshold = float(t)
+        # self.threshold = float(t)
 
         self._set_input_tensor(image)
         self._interpreter.invoke()
 
-        # Get all output details
-        boxes = self._get_output_tensor(0)
-        classes = self._get_output_tensor(1)
-        scores = self._get_output_tensor(2)
-        count = int(self._get_output_tensor(3))
+        # Get all output details - use same format as tensorflow serving
+        results = {
+            'predictions': [
+                {
+                    'detection_boxes': self._get_output_tensor(0),
+                    'detection_classes': self._get_output_tensor(1),
+                    'detection_scores': self._get_output_tensor(2),
+                    'num_detections': int(self._get_output_tensor(3)),
+                }
+            ]
+        }
 
-        results = [
-            {
-                'bounding_box': boxes[i],
-                'class_id': classes[i],
-                'class': self._labels[classes[i]].lower(),
-                'score': scores[i]
-            }
-            for i in range(count)
-            if self._target_label.lower()
-            in [self._labels[classes[i]].lower(), '__all__']
-            and scores[i] >= self._threshold
-        ]
+        # print(
+        #     "results['predictions'][0]['num_detections']: ",
+        #     results['predictions'][0]['num_detections']
+        # )
+
+        # return format_results(
+        #     results['predictions'][0]['num_detections'],
+        #     results['predictions'][0]['detection_boxes'],
+        #     results['predictions'][0]['detection_scores'],
+        #     results['predictions'][0]['detection_classes'],
+        #     self.labels,
+        #     self.target_label,
+        #     self.threshold,
+        #     self.class_id_offset
+        # )
+
         return results
 
     def _resize_image(self, img: np.ndarray) -> np.ndarray:
+        # print(
+        #     "self._input_details[0]['shape']: ",
+        #     self._input_details[0]['shape']
+        # )
         _, input_height, input_width, _ = self._input_details[0]['shape']
         # image = Image.fromarray(img)
         # return image.resize((input_width, input_height), Image.ANTIALIAS)
