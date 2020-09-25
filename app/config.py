@@ -8,7 +8,9 @@ DEFAULT_ARGS = SimpleNamespace(
     threshold=0.3,
     num_threads=4,
     camera=0,
-    class_id_offset=0
+    class_id_offset=0,
+    server_modulus=25,
+    class_id_offset_celery=-1  # for tensorflow_serving
 )
 API_MODEL_NAME = 'default'
 APP_SERVER_OPTIONS = ['flask', 'falcon']
@@ -21,6 +23,7 @@ APP_SERVER = SimpleNamespace(
     default_args=copy.deepcopy(DEFAULT_ARGS),
     remote_base_url='http://localhost'  # 'http://192.168.42.174'
 )
+assert APP_SERVER.type in APP_SERVER_OPTIONS
 APP_SERVER.default_args.model_path = (
     './models/ssd_resnet50_v1_fpn_640x640_coco17_tpu-8'
     '/tflite/saved_model/detect.tflite'
@@ -40,3 +43,6 @@ CELERY_CONFIG = SimpleNamespace(
     task_serializer='pickle',
     accept_content=['pickle']
 )
+CELERY_API_SERVER_OPTIONS = ['api', 'tensorflow_serving']
+CELERY_API_SERVER = CELERY_API_SERVER_OPTIONS[1]
+assert CELERY_API_SERVER in CELERY_API_SERVER_OPTIONS

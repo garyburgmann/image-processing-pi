@@ -9,7 +9,6 @@ from app.utils import (
 )
 from app.config import (
     APP_SERVER,
-    APP_SERVER_OPTIONS,
 )
 
 # mimic args, as argparse will clash with gunicorn
@@ -25,9 +24,6 @@ def predict_frame(frame: np.ndarray) -> Tuple[List[Dict], int]:
     res = clf.exec(frame)
     print(f'{__name__} | res: {res}')
     return res
-
-
-assert APP_SERVER.type in APP_SERVER_OPTIONS, '\n\ninvalid APP_SERVER.type\n\n'
 
 print(f'starting {APP_SERVER.type} server')
 

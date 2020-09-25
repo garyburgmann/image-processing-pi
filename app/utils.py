@@ -4,6 +4,7 @@ from typing import List, Any, Tuple, Dict
 import pickle
 import time
 import re
+from types import SimpleNamespace
 
 import cv2
 import numpy as np
@@ -173,10 +174,25 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_ARGS.camera
     )
     parser.add_argument(
+        '--server_modulus',
+        type=int,
+        help=(
+            'the number of images to process before requesting server '
+            'feedback asynchronously with celery'
+        ),
+        default=DEFAULT_ARGS.server_modulus
+    )
+    parser.add_argument(
         '--class_id_offset',
         type=int,
         help='some models start class ids at 0, some at 1',
         default=DEFAULT_ARGS.class_id_offset
+    )
+    parser.add_argument(
+        '--class_id_offset_celery',
+        type=int,
+        help='some models start class ids at 0, some at 1',
+        default=DEFAULT_ARGS.class_id_offset_celery
     )
     parser.add_argument(
         '--lite',
@@ -392,5 +408,81 @@ def load_labels(path: str) -> Dict:
     return labels
 
 
-# def compare_section(section_id: str, min_x, min_y, max_x, max_y):
-#     pass
+def get_quadrant_key(mid_y: float, mid_x: float, bbox: List) -> str:
+    """ decide on quadrant to update, assume q1 as default """
+    # assume min, i.e. q1, modify on falsey
+    is_y_min = True
+    is_x_min = True
+    ymin, xmin, ymax, xmax = bbox
+    if abs(ymax - mid_y) > abs(ymin - mid_y):
+        # falls within q3 or q4, negates truthy
+        is_y_min = False
+    if abs(xmax - mid_x) > abs(xmin - mid_x):
+        # falls within q2 or q4, negates truthy
+        is_x_min = False
+
+    key = 'q1'
+    if is_y_min and not is_x_min:
+        key = 'q2'
+    elif not is_y_min and is_x_min:
+        key = 'q3'
+    elif not is_y_min and not is_x_min:
+        key = 'q3'
+
+    return key
+
+
+def aggregate_sections(
+    mid_y: float,
+    mid_x: float,
+    data: List[Dict]
+) -> SimpleNamespace:
+    """
+    count total detections per section, defined as:
+
+    q1, q2
+    q3, q4
+
+    equal distances belong to mininum
+    e.g. a value directly between q1 and q2 belongs to q1
+    """
+    sections = SimpleNamespace(
+        q1=0,
+        q2=0,
+        q3=0,
+        q4=0
+    )
+
+    for d in data:  # already rescaled
+        key = get_quadrant_key(mid_y, mid_y, d['bounding_box'])
+        sections.__dict__[key] += 1
+
+    return sections
+
+
+def get_quadrant_results(
+    frame: np.ndarray,
+    onboard: List[Dict],
+    offboard: List[Dict],
+):
+    """ split into 4 quadrants and compare results from each """
+    y, x, num_channels = frame.shape
+
+    mid_y, mid_x = y / 2, x / 2
+
+    # pass thru rescaled images
+    onboard_res = aggregate_sections(
+        mid_y,
+        mid_x,
+        rescale_image(frame, onboard)
+    )
+    # print('onboard_res: ', onboard_res.__dict__)
+
+    offboard_res = aggregate_sections(
+        mid_y,
+        mid_x,
+        rescale_image(frame, offboard)
+    )
+    # print('offboard_res: ', offboard_res.__dict__)
+
+    return onboard_res, offboard_res
