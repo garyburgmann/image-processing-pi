@@ -3,7 +3,7 @@ import copy
 
 DEFAULT_ARGS = SimpleNamespace(
     model_path='./models/ssd_mobilenet_v3_large_coco_2020_01_14/model.tflite',
-    labels_path='./labels/coco.txt',
+    labels_path='./labels/coco_labels.txt',
     target='person',
     threshold=0.3,
     num_threads=4,
