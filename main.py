@@ -19,7 +19,7 @@ from app.utils import (
     detect_api,
     # descale_image,
 )
-from app.tasks import detect
+from app.tasks import detect_and_compare
 from app.redis import get_redis
 
 
@@ -42,7 +42,6 @@ if __name__ == '__main__':
     previous_zero = False
     all_results: List[List[Dict]] = []
     # executor = ThreadPoolExecutor()
-    server_modulus = 5
     start = time.time()
     for frame_idx, frame in enumerate(video.frames(), 1):
         # if previous_zero:
@@ -80,8 +79,8 @@ if __name__ == '__main__':
             # classify locally
             results, num_boxes = run_classifier(img=input_frame, clf=clf)
 
-        if frame_idx % server_modulus == 0 and args.celery:
-            _ = detect.delay(input_frame, frame_idx)
+        if frame_idx % args.server_modulus == 0 and args.celery:
+            _ = detect_and_compare.delay(input_frame, args, results, frame_idx)
 
         # classify locally threaded
         # x = executor.submit(run_classifier, img=input_frame, clf=clf)
