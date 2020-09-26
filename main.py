@@ -9,7 +9,6 @@ import cv2
 
 from app.utils import (
     run_classifier,
-    rescale_image,
     draw_boxes,
     get_video_source,
     log_metrics,
@@ -17,7 +16,6 @@ from app.utils import (
     get_classifier,
     dump_results,
     detect_api,
-    # descale_image,
 )
 from app.tasks import detect_and_compare
 from app.redis import get_redis
@@ -28,11 +26,18 @@ if __name__ == '__main__':
 
     video = get_video_source(args)
 
-    if args.redis:
-        r = get_redis()
-        p = r.pubsub(ignore_subscribe_messages=True)
-        p.subscribe('ack')
-        r.set('threshold', args.threshold)
+    # if args.redis:
+    #     r = get_redis()
+    #     p = r.pubsub(ignore_subscribe_messages=True)
+    #     p.subscribe('ack')
+    #     r.set('threshold', args.threshold)
+
+    # TODO: perform this conditionally
+    r = get_redis()
+    r.set('q1', args.threshold)
+    r.set('q2', args.threshold)
+    r.set('q3', args.threshold)
+    r.set('q4', args.threshold)
         # print(args)
         # all args have defaults
 
@@ -70,17 +75,24 @@ if __name__ == '__main__':
         #     x = executor.submit(detect_api, input_frame)
         # else:
         #     x = executor.submit(run_classifier, img=input_frame, clf=clf)
-        # results, num_boxes = x.result()
+        # results, num_boxes, thresholds = x.result()
 
         if args.api or args.tensorflow_serving:
             # classify via api
-            results, num_boxes = detect_api(input_frame, args=args)
+            results, num_boxes, thresholds = detect_api(input_frame, args=args)
         else:
             # classify locally
-            results, num_boxes = run_classifier(img=input_frame, clf=clf)
+            results, num_boxes, thresholds = \
+                run_classifier(frame=input_frame, clf=clf)
 
         if frame_idx % args.server_modulus == 0 and args.celery:
-            _ = detect_and_compare.delay(input_frame, args, results, frame_idx)
+            _ = detect_and_compare.delay(
+                input_frame,
+                args,
+                results,
+                thresholds,
+                frame_idx
+            )
 
         # classify locally threaded
         # x = executor.submit(run_classifier, img=input_frame, clf=clf)
@@ -89,7 +101,8 @@ if __name__ == '__main__':
 
         print('inference time: ', time.time() - inference_start)
 
-        results = rescale_image(frame, results)
+        # results = rescale_results(frame, results)
+
         # print('results, num_boxes: ', results, num_boxes)
         # 2 dimensional by design
         all_results.append(results)

@@ -18,20 +18,25 @@ from app.config import (
     APP_SERVER,
     CLASSIFIER_INPUT_SHAPE,
     DEFAULT_ARGS,
-    API_MODEL_NAME
+    API_MODEL_NAME,
+    THRESHOLD_CONFIG
 )
+from app.redis import get_redis
+
+r = get_redis()
 
 
 def run_classifier(
-    img: np.ndarray,
+    frame: np.ndarray,
     clf: ObjectDetection
 ) -> Tuple[List[Dict], int]:
     """ run_classifier then return result & number of detections """
-    predictions = clf.exec(img)['predictions'][0]
+    predictions = clf.exec(frame)['predictions'][0]
 
     count = int(predictions['num_detections'])
 
-    results = format_results(
+    results, thresholds = format_results(
+        frame,
         count,
         predictions['detection_boxes'],
         predictions['detection_scores'],
@@ -42,23 +47,32 @@ def run_classifier(
         class_id_offset=clf.class_id_offset  # classes start at 1, not zero
     )
 
-    return results, len(results)
+    return results, len(results), thresholds
 
 
-def rescale_image(img: np.ndarray, result: List[Dict]) -> List[Dict]:
-    """ use frame's original shape to restore aspect ratio """
+def rescale_bbox(bbox: List, height: int, width: int) -> List:
+    """ change detected boxes back to original size """
+    # ymin, xmin, ymax, xmax = bbox
+    assert len(bbox) == 4
+    return [
+        coord * width
+        if idx in [1, 3]  # x coords
+        else coord * height  # y coords
+        for idx, coord
+        in enumerate(bbox)
+    ]
+
+
+def rescale_results(img: np.ndarray, result: List[Dict]) -> List[Dict]:
+    """ use frame's original shape to restore aspect ratio to bboxes """
     if result:
-        CAMERA_HEIGHT, CAMERA_WIDTH = img.shape[:2]
-        # CAMERA_HEIGHT, CAMERA_WIDTH = img.size
+        height, width = img.shape[:2]
         for bbox in result:
-            ymin, xmin, ymax, xmax = bbox['bounding_box']
-
-            xmin = xmin * CAMERA_WIDTH
-            xmax = xmax * CAMERA_WIDTH
-            ymin = ymin * CAMERA_HEIGHT
-            ymax = ymax * CAMERA_HEIGHT
-
-            bbox['bounding_box'] = [ymin, xmin, ymax, xmax]
+            bbox['bounding_box'] = rescale_bbox(
+                bbox['bounding_box'],
+                height,
+                width
+            )
     return result
 
 
@@ -159,6 +173,12 @@ def parse_args() -> argparse.Namespace:
         type=float,
         help='confidence threshold',
         default=DEFAULT_ARGS.threshold
+    )
+    parser.add_argument(
+        '--server_threshold',
+        type=float,
+        help='confidence threshold for server only',
+        default=DEFAULT_ARGS.server_threshold
     )
     parser.add_argument(
         '-n',
@@ -323,18 +343,20 @@ def detect_api(
 
     count = int(predictions['num_detections'])
 
-    results = format_results(
+    results, thresholds = format_results(
+        input_frame,
         count,
         predictions['detection_boxes'],
         predictions['detection_scores'],
         predictions['detection_classes'],
         load_labels(args.labels_path),
         args.target,
-        args.threshold,
-        class_id_offset=args.class_id_offset  # classes start at 1, not zero
+        args.server_threshold,  # can use a different threshold to client
+        class_id_offset=args.class_id_offset,  # classes start at 1, not zero
+        is_server=True  # override quadrant calcs to use static threshold
     )
 
-    return results, len(results)
+    return results, len(results), thresholds
 
 
 def descale_image(frame: np.ndarray) -> np.ndarray:
@@ -353,14 +375,30 @@ def map_class_to_label(class_id: int, labels: Dict) -> str:
     """
     try:
         label = labels[class_id].lower()
-        print("label: ", label)
+        # print("label: ", label)
         return labels[class_id].lower()
     except:
         print("label missing for class_id: ", class_id)
         return '???'
 
 
+def get_single_result_dict(
+    box: List,
+    score: float,
+    class_id: int,
+    class_label: str
+) -> Dict:
+    """ return formatted dict for single detection from a frame """
+    return {
+        'bounding_box': box,
+        'class_id': class_id,
+        'class': class_label,
+        'score': score
+    }
+
+
 def format_results(
+    frame,
     count: int,
     boxes: List[List],
     scores: List,
@@ -368,27 +406,61 @@ def format_results(
     labels: Dict,
     target_label: str,
     threshold: float,
-    class_id_offset: int = DEFAULT_ARGS.class_id_offset
-) -> Dict:
+    class_id_offset: int = DEFAULT_ARGS.class_id_offset,
+    is_server: bool = False
+) -> List[Dict]:
     """ declare here to share with multiple classification methods """
-    return [
-        {
-            'bounding_box': boxes[i],
-            'class_id': int(classes[i]) + class_id_offset,
-            'class': map_class_to_label(
-                int(classes[i]) + class_id_offset,
-                labels
-            ),
-            'score': scores[i]
-        }
-        for i in range(count)
-        if target_label.lower()
-        in [
-            map_class_to_label(int(classes[i]) + class_id_offset, labels),
-            '__all__'
-        ]
-        and scores[i] >= float(threshold)
-    ]
+    target = target_label.lower()  # prevent casing typos
+    thresholds = {}  # store retrieved values to lessen redis load
+    height, width = frame.shape[:2]  # idx 3 == channels
+    results = []
+    for i in range(count):
+        class_id = int(classes[i]) + class_id_offset
+        class_label = map_class_to_label(class_id, labels)
+        if target in [class_label, '__all__']:
+            # rescale image first for get_quadrant_key 
+            box = rescale_bbox(boxes[i], height, width)
+            if is_server:
+                # use a static threshold from args
+                meets_threshold = scores[i] >= threshold  # bool
+            else:
+                # use quadrant technique for client
+                # determine quadrant that box falls into, use to set threshold
+                key = get_quadrant_key(frame, box)
+                # this must be set in main.py, no need for exception handling
+                thresholds[key] = thresholds.get(key, round(float(r.get(key)), 2))
+                meets_threshold = scores[i] >= thresholds[key]
+            if meets_threshold:
+                # meets criteria, return result
+                results.append(
+                    get_single_result_dict(
+                        box,
+                        scores[i],
+                        class_id,
+                        class_label
+                    )
+                )
+    
+    print(f'format_results run against thresholds: {thresholds}')
+    return results, thresholds  # return thresholds for async comparison
+    # return [
+    #     {
+    #         'bounding_box': boxes[i],
+    #         'class_id': int(classes[i]) + class_id_offset,
+    #         'class': map_class_to_label(
+    #             int(classes[i]) + class_id_offset,
+    #             labels
+    #         ),
+    #         'score': scores[i]
+    #     }
+    #     for i in range(count)
+    #     if target_label.lower()
+    #     in [
+    #         map_class_to_label(int(classes[i]) + class_id_offset, labels),
+    #         '__all__'
+    #     ]
+    #     and scores[i] >= float(threshold)
+    # ]
 
 
 def load_labels(path: str) -> Dict:
@@ -408,12 +480,15 @@ def load_labels(path: str) -> Dict:
     return labels
 
 
-def get_quadrant_key(mid_y: float, mid_x: float, bbox: List) -> str:
+def get_quadrant_key(frame: np.ndarray, bbox: List) -> str:
     """ decide on quadrant to update, assume q1 as default """
+    mid_y, mid_x = get_mid_y_mid_x(frame)
+
     # assume min, i.e. q1, modify on falsey
     is_y_min = True
     is_x_min = True
     ymin, xmin, ymax, xmax = bbox
+
     if abs(ymax - mid_y) > abs(ymin - mid_y):
         # falls within q3 or q4, negates truthy
         is_y_min = False
@@ -433,8 +508,7 @@ def get_quadrant_key(mid_y: float, mid_x: float, bbox: List) -> str:
 
 
 def aggregate_sections(
-    mid_y: float,
-    mid_x: float,
+    frame: np.ndarray,
     data: List[Dict]
 ) -> SimpleNamespace:
     """
@@ -454,7 +528,7 @@ def aggregate_sections(
     )
 
     for d in data:  # already rescaled
-        key = get_quadrant_key(mid_y, mid_y, d['bounding_box'])
+        key = get_quadrant_key(frame, d['bounding_box'])
         sections.__dict__[key] += 1
 
     return sections
@@ -464,25 +538,119 @@ def get_quadrant_results(
     frame: np.ndarray,
     onboard: List[Dict],
     offboard: List[Dict],
-):
+) -> Tuple[SimpleNamespace, SimpleNamespace]:
     """ split into 4 quadrants and compare results from each """
-    y, x, num_channels = frame.shape
-
-    mid_y, mid_x = y / 2, x / 2
-
     # pass thru rescaled images
     onboard_res = aggregate_sections(
-        mid_y,
-        mid_x,
-        rescale_image(frame, onboard)
+        frame,
+        onboard
+        # rescale_results(frame, onboard)
     )
     # print('onboard_res: ', onboard_res.__dict__)
 
     offboard_res = aggregate_sections(
-        mid_y,
-        mid_x,
-        rescale_image(frame, offboard)
+        frame,
+        offboard
+        # rescale_results(frame, offboard)
     )
     # print('offboard_res: ', offboard_res.__dict__)
 
     return onboard_res, offboard_res
+
+
+def validate_threshold_divergence(
+    current_value: float,
+    original_value: float
+) -> bool:
+    """
+    due to async server response, threshold may already have been adjusted
+
+    this function is used to validate, with tolerance, permission to adjust
+    """
+    return abs(
+        round(
+            current_value - original_value,
+            2
+        )
+    ) <= THRESHOLD_CONFIG.tolerance
+
+
+def update_quadrant_threshold(
+    key: str,
+    original_thresholds: Dict,
+    lower: bool = False,
+    higher: bool = False
+) -> float:
+    """ assumes that key is set, as per main.py """
+    global r  # redis
+    val = round(float(r.get(key)), 2)  # cast bytes to float
+    print(f'current val for key {key}: {val}')
+    original_value = original_thresholds.get(key)  # TODO: may not exist?
+
+    if not validate_threshold_divergence(val, original_value):
+        raise Exception(
+            f'current value ({val}) has diverged too far from original value '
+            f'({original_value})'
+        )
+
+    if lower:
+        val -= THRESHOLD_CONFIG.increment
+    elif higher:
+        val += THRESHOLD_CONFIG.increment
+
+    new_val = round(val, 2)
+    if 0 < new_val < 1:
+        # catch async situation driving results out of range
+        print(f'setting val for key {key}: {new_val}')
+        r.set(key, new_val)
+    else:
+        # throw here so that we don't return
+        raise Exception(
+            f'new value ({new_val}) for key ({key}) has an invalid range, new '
+            'value has not been set set'
+        )
+
+    return new_val
+
+
+def compare_quadrants_from_results(
+    onboard: SimpleNamespace,
+    offboard: SimpleNamespace,
+    original_thresholds: Dict
+) -> SimpleNamespace:
+    """ compare quadrants and update redis keys as required """
+    updated_quadrants = SimpleNamespace()
+
+    for key in onboard.__dict__.keys():
+        val = None
+        try:
+            if getattr(onboard, key) > getattr(offboard, key):
+                # too confident, raise threshold
+                val = update_quadrant_threshold(
+                    key,
+                    original_thresholds,
+                    higher=True
+                )
+            if getattr(onboard, key) < getattr(offboard, key):
+                # not enough results found, lower threshold
+                val = update_quadrant_threshold(
+                    key,
+                    original_thresholds,
+                    lower=True
+                )
+        except Exception as exc:
+            # thrown when value would be invalid - due to aysnc operation
+            print(f'update_quadrant_threshold error: {exc}')
+        if val:
+            updated_quadrants.__dict__[key] = val
+
+    return updated_quadrants
+
+
+def get_mid_y_mid_x(frame: np.ndarray) -> Tuple[float, float]:
+    """ get the shape of image array and return dimensions """
+    y, x, num_channels = frame.shape
+
+    mid_y, mid_x = y / 2, x / 2
+
+    return mid_y, mid_x

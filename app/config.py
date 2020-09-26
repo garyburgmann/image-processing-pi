@@ -6,10 +6,11 @@ DEFAULT_ARGS = SimpleNamespace(
     labels_path='./labels/coco_labels.txt',
     target='person',
     threshold=0.3,
+    server_threshold=0.5,
     num_threads=4,
     camera=0,
     class_id_offset=0,
-    server_modulus=25,
+    server_modulus=30,
     class_id_offset_celery=-1  # for tensorflow_serving
 )
 API_MODEL_NAME = 'default'
@@ -46,3 +47,8 @@ CELERY_CONFIG = SimpleNamespace(
 CELERY_API_SERVER_OPTIONS = ['api', 'tensorflow_serving']
 CELERY_API_SERVER = CELERY_API_SERVER_OPTIONS[1]
 assert CELERY_API_SERVER in CELERY_API_SERVER_OPTIONS
+# THRESHOLD_INCREMENT = 0.05  # used to tune quadrants
+THRESHOLD_CONFIG = SimpleNamespace(
+    increment=0.05,
+    tolerance=0.05
+) 

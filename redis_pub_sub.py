@@ -23,16 +23,16 @@ count = 0
 
 def classify_frame(frame: np.ndarray) -> Tuple[List[Dict], int]:
     global clf
-    results, num_boxes = run_classifier(img=frame, clf=clf)
+    results, num_boxes, thresholds = run_classifier(frame=frame, clf=clf)
     print(f'{__name__}: {results}, {num_boxes}')
-    return results, num_boxes
+    return results, num_boxes, thresholds
 
 
 def my_handler(message):
     global count
     count += 1
     frame = pickle.loads(message['data'])
-    results, num_boxes = classify_frame(frame)
+    results, num_boxes, thresholds = classify_frame(frame)
     print('my_handler: ', count)
     r.publish('ack', pickle.dumps([results, num_boxes]))
 
