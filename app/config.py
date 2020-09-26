@@ -13,7 +13,6 @@ DEFAULT_ARGS = SimpleNamespace(
     server_modulus=30,
     class_id_offset_celery=-1  # for tensorflow_serving
 )
-API_MODEL_NAME = 'default'
 APP_SERVER_OPTIONS = ['flask', 'falcon']
 APP_SERVER = SimpleNamespace(
     type=APP_SERVER_OPTIONS[1],
@@ -28,6 +27,11 @@ assert APP_SERVER.type in APP_SERVER_OPTIONS
 APP_SERVER.default_args.model_path = (
     './models/ssd_resnet50_v1_fpn_640x640_coco17_tpu-8'
     '/tflite/saved_model/detect.tflite'
+)
+TENSORFLOW_SERVING = SimpleNamespace(
+    port=8501,
+    remote_base_url='http://localhost',
+    model_name='default'
 )
 CLASSIFIER_INPUT_SHAPE = SimpleNamespace(
     width=300,

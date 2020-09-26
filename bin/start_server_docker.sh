@@ -11,6 +11,7 @@ docker run \
     -v $PWD/models:/srv/models \
     -v $PWD/labels:/srv/labels \
     -v $PWD/app:/srv/app \
+    -p 8000:8000 \
     -d \
     $IMAGE_NAME
 docker logs -f $CONTAINER_NAME

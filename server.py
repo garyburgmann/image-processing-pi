@@ -79,31 +79,30 @@ elif APP_SERVER.type == 'falcon':
             resp.body = pickle.dumps(results)
 
     
-    # class CompareResource:
-    #     def on_post(self, req, resp):
-    #         """ Handles POST request """
-    #         body = req.stream.read()
-    #         frame, onboard, results, original_thresholds = pickle.loads(body)
+    class QuadrantsResource:
+        def on_post(self, req, resp):
+            """ Handles POST request """
+            body = req.stream.read()
+            frame, onboard, offboard = pickle.loads(body)
             
-    #         onboard_res, offboard_res, original_thresholds = \
-    #             get_quadrant_results(frame, onboard, results)
+            onboard_res, offboard_res = \
+                get_quadrant_results(frame, onboard, offboard)
 
-    #         # print(f'{__name__} | idx: {idx} | onboard_res: {onboard_res.__dict__}')
-    #         # print(f'{__name__} | idx: {idx} | offboard_res: {offboard_res.__dict__}')
+            # print(f'{__name__} | idx: {idx} | onboard_res: {onboard_res.__dict__}')
+            # print(f'{__name__} | idx: {idx} | offboard_res: {offboard_res.__dict__}')
 
-    #         updated_quadrants = compare_quadrants_from_results(
-    #             onboard_res,
-    #             offboard_res,
-    #             original_thresholds
-    #         )
+            # updated_quadrants = compare_quadrants_from_results(
+            #     onboard_res,
+            #     offboard_res,
+            #     original_thresholds
+            # )
 
-    #         resp.body = \
-    #             pickle.dumps([onboard_res, offboard_res, updated_quadrants])
+            resp.body = pickle.dumps([onboard_res, offboard_res])
 
 
     api.add_route('/ping', PingResource())
     api.add_route(f'/{APP_SERVER.endpoint}', PredictionResource())
-    # api.add_route(f'/compare', CompareResource())
+    api.add_route('/quadrants', QuadrantsResource())
 
     application = api
 

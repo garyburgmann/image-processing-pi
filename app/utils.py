@@ -18,8 +18,8 @@ from app.config import (
     APP_SERVER,
     CLASSIFIER_INPUT_SHAPE,
     DEFAULT_ARGS,
-    API_MODEL_NAME,
-    THRESHOLD_CONFIG
+    THRESHOLD_CONFIG,
+    TENSORFLOW_SERVING
 )
 from app.redis import get_redis
 
@@ -325,7 +325,8 @@ def detect_api(
     predictions = None
     if args.tensorflow_serving:
         res = requests.post(
-            f'http://localhost:8501/v1/models/{API_MODEL_NAME}:predict',
+            f'{TENSORFLOW_SERVING.remote_base_url}:{TENSORFLOW_SERVING.port}'
+            f'/v1/models/{TENSORFLOW_SERVING.model_name}:predict',
             json={'instances': [input_frame.tolist()]}
         )
         res.raise_for_status()
@@ -538,22 +539,33 @@ def get_quadrant_results(
     frame: np.ndarray,
     onboard: List[Dict],
     offboard: List[Dict],
+    from_server: bool = False
 ) -> Tuple[SimpleNamespace, SimpleNamespace]:
     """ split into 4 quadrants and compare results from each """
-    # pass thru rescaled images
-    onboard_res = aggregate_sections(
-        frame,
-        onboard
-        # rescale_results(frame, onboard)
-    )
-    # print('onboard_res: ', onboard_res.__dict__)
+    if not from_server:
+        # pass thru rescaled images
+        onboard_res = aggregate_sections(
+            frame,
+            onboard
+            # rescale_results(frame, onboard)
+        )
+        # print('onboard_res: ', onboard_res.__dict__)
 
-    offboard_res = aggregate_sections(
-        frame,
-        offboard
-        # rescale_results(frame, offboard)
-    )
-    # print('offboard_res: ', offboard_res.__dict__)
+        offboard_res = aggregate_sections(
+            frame,
+            offboard
+            # rescale_results(frame, offboard)
+        )
+        # print('offboard_res: ', offboard_res.__dict__)
+    else:
+        res = requests.post(
+            f'{APP_SERVER.remote_base_url}:{APP_SERVER.port}'
+            f'/quadrants',
+            data=pickle.dumps([frame, onboard, offboard])
+        )
+        res.raise_for_status()
+        # returns bytes
+        onboard_res, offboard_res = pickle.loads(res.content)
 
     return onboard_res, offboard_res
 
