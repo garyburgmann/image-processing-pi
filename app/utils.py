@@ -602,7 +602,7 @@ def update_quadrant_threshold(
     if not validate_threshold_divergence(val, original_value):
         raise Exception(
             f'current value ({val}) has diverged too far from original value '
-            f'({original_value})'
+            f'({original_value}) for key ({key})'
         )
 
     if lower:

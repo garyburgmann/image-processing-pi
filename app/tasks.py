@@ -35,7 +35,7 @@ def detect_and_compare(
     results, num_boxes, thresholds = detect_api(frame, args=args_copy)
 
     onboard_res, offboard_res = \
-        get_quadrant_results(frame, onboard, results, from_server=True)
+        get_quadrant_results(frame, onboard, results, from_server=False)
 
     print(f'{__name__} | idx: {idx} | onboard_res: {onboard_res.__dict__}')
     print(f'{__name__} | idx: {idx} | offboard_res: {offboard_res.__dict__}')
