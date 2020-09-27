@@ -27,4 +27,4 @@ docker run -t --rm -p $PORT:8501 \
     -e MODEL_NAME=$API_MODEL_NAME \
     --name $CONTAINER_NAME \
     -d $IMAGE
-docker logs -f $CONTAINER_NAME
+# docker logs -f $CONTAINER_NAME

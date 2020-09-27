@@ -33,4 +33,25 @@ curl -O $MODEL_URI
 tar xzvf $MODEL_FILE
 rm $MODEL_FILE
 
+MODEL_FILE="ssdlite_mobiledet_cpu_320x320_coco_2020_05_19.tar.gz"
+MODEL_URI="http://download.tensorflow.org/models/object_detection/$MODEL_FILE"
+
+curl -O $MODEL_URI
+tar xzvf $MODEL_FILE
+rm $MODEL_FILE
+
+MODEL_FILE="ssd_mobilenet_v3_small_coco_2020_01_14.tar.gz"
+MODEL_URI="http://download.tensorflow.org/models/object_detection/$MODEL_FILE"
+
+curl -O $MODEL_URI
+tar xzvf $MODEL_FILE
+rm $MODEL_FILE
+
+MODEL_FILE="ssdlite_mobiledet_dsp_320x320_coco_2020_05_19.tar.gz"
+MODEL_URI="http://download.tensorflow.org/models/object_detection/$MODEL_FILE"
+
+curl -O $MODEL_URI
+tar xzvf $MODEL_FILE
+rm $MODEL_FILE
+
 echo -e "TFLite models downloaded to $MODELS_DIR"

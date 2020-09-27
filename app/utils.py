@@ -23,7 +23,7 @@ from app.config import (
 )
 from app.redis import get_redis
 
-r = get_redis()
+# r = get_redis()
 
 
 def run_classifier(
@@ -44,7 +44,8 @@ def run_classifier(
         clf.labels,
         clf.target_label,
         clf.threshold,
-        class_id_offset=clf.class_id_offset  # classes start at 1, not zero
+        class_id_offset=clf.class_id_offset,  # classes start at 1, not zero
+        is_server=True
     )
 
     return results, len(results), thresholds
@@ -417,6 +418,7 @@ def format_results(
     results = []
     for i in range(count):
         class_id = int(classes[i]) + class_id_offset
+        # print('classes[i], class_id_offset: ', classes[i], class_id_offset)
         class_label = map_class_to_label(class_id, labels)
         if target in [class_label, '__all__']:
             # rescale image first for get_quadrant_key 

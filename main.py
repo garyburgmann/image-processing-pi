@@ -33,15 +33,16 @@ if __name__ == '__main__':
     #     r.set('threshold', args.threshold)
 
     # TODO: perform this conditionally
-    r = get_redis()
-    r.set('q1', args.threshold)
-    r.set('q2', args.threshold)
-    r.set('q3', args.threshold)
-    r.set('q4', args.threshold)
+    # r = get_redis()
+    # r.set('q1', args.threshold)
+    # r.set('q2', args.threshold)
+    # r.set('q3', args.threshold)
+    # r.set('q4', args.threshold)
         # print(args)
         # all args have defaults
 
-    clf = get_classifier(args)
+    if not (args.api or args.tensorflow_serving):
+        clf = get_classifier(args)
 
     total_detections = 0
     previous_zero = False
