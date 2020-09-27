@@ -45,7 +45,7 @@ def run_classifier(
         clf.target_label,
         clf.threshold,
         class_id_offset=clf.class_id_offset,  # classes start at 1, not zero
-        is_server=True
+        is_server=False
     )
 
     return results, len(results), thresholds
@@ -581,6 +581,9 @@ def validate_threshold_divergence(
 
     this function is used to validate, with tolerance, permission to adjust
     """
+    if not original_value:
+        # on first run, will have no value
+        return True
     return abs(
         round(
             current_value - original_value,

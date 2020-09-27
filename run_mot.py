@@ -47,10 +47,27 @@ def get_args() -> argparse.Namespace:
         help='flag to use tensorflow serving api for detection',
     )
     parser.add_argument(
+        '--api',
+        action='store_true',
+        help='classify with external api (http)',
+    )
+    parser.add_argument(
         '--class_id_offset',
         type=int,
         help='some models start class ids at 0, some at 1',
         default=0
+    )
+    parser.add_argument(
+        '--celery',
+        action='store_true',
+        help='classify with backend celery process',
+    )
+    parser.add_argument(
+        '-n',
+        '--num_threads',
+        type=int,
+        help='number of threads for processing',
+        default=4
     )
     return parser.parse_args()
 
@@ -69,7 +86,7 @@ def main() -> None:
     print('out_dir: ', out_dir)
     os.makedirs(out_dir, exist_ok=True)
 
-    for subdir in ['train', 'test']:  # test doesn't have ground truth
+    for subdir in ['train']:  # test doesn't have ground truth
         context_dir = os.path.join(args.mot, subdir)
         mots = sorted(os.listdir(context_dir))
         for mot in mots:
@@ -90,8 +107,14 @@ def main() -> None:
                 cmd += ' --lite'
             if args.tensorflow_serving:
                 cmd += ' --tensorflow_serving'  # model will be ignored
+            if args.api:
+                cmd += ' --api'  # model will be ignored
             if args.class_id_offset:
                 cmd += f' --class_id_offset {args.class_id_offset}'
+            if args.celery:
+                cmd += ' --celery'
+            if args.num_threads:
+                cmd += f' --num_threads {args.num_threads}'
 
             _ = subprocess.call(cmd, shell=True)
 
