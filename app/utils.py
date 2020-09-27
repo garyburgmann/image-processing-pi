@@ -341,7 +341,7 @@ def detect_api(
         )
         res.raise_for_status()
         # returns bytes
-        predictions = pickle.loads(res.content)['predictions'][0]
+        predictions = pickle.loads(res.content)
 
     count = int(predictions['num_detections'])
 

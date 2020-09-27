@@ -1,7 +1,10 @@
 import pickle
 from typing import List, Tuple, Dict
+import time
+import os
 
 import numpy as np
+import tensorflow as tf
 
 from app.utils import (
     parse_args,
@@ -14,18 +17,45 @@ from app.config import (
 )
 
 # mimic args, as argparse will clash with gunicorn
-server_args = APP_SERVER.default_args
-server_args.lite = False
+# server_args = APP_SERVER.default_args
+# server_args.lite = False
 
 # bootstrap here to reduce latency on each request
-clf = get_classifier(server_args)
+# clf = get_classifier(server_args)
+
+print("loading model ...")
+start_time = time.time()
+clf = tf.saved_model.load(APP_SERVER.default_args.model_path)
+print(f"model loaded in {time.time() - start_time} seconds")
 
 
 def predict_frame(frame: np.ndarray) -> Tuple[List[Dict], int]:
     global clf
-    res = clf.exec(frame)
-    print(f'{__name__} | res: {res}')
-    return res
+    # res = clf.exec(frame)
+
+    converted_img  = tf.image.convert_image_dtype(
+        frame,
+        tf.uint8
+    )[tf.newaxis, ...]
+    
+    print("starting inference ...")
+    start_time = time.time()
+    res = clf(converted_img)
+    print(f"inference time: {time.time() - start_time} seconds")
+
+    # print(f'{__name__} | res: {res}')
+
+    # .numpy() will error on num_detections, pop and add back in
+    num_detections = int(res.pop('num_detections'))
+
+    predictions = {
+        key: value[0, :num_detections].numpy()
+        for key, value in res.items()
+    }
+    predictions['num_detections'] = num_detections
+
+    return predictions
+
 
 print(f'starting {APP_SERVER.type} server')
 
