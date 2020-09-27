@@ -2,3 +2,8 @@ venv/
 venv-nightly
 models/
 notebooks/
+out/
+deploy/
+.idea/
+.vscode/
+__pycache__/

@@ -69,6 +69,11 @@ def get_args() -> argparse.Namespace:
         help='number of threads for processing',
         default=4
     )
+    parser.add_argument(
+        '--server_threshold',
+        type=float,
+        help='confidence threshold for server only',
+    )
     return parser.parse_args()
 
 
@@ -115,6 +120,8 @@ def main() -> None:
                 cmd += ' --celery'
             if args.num_threads:
                 cmd += f' --num_threads {args.num_threads}'
+            if args.server_threshold:
+                cmd += f' --server_threshold {args.server_threshold}'
 
             _ = subprocess.call(cmd, shell=True)
 

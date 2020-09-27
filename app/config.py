@@ -24,9 +24,13 @@ APP_SERVER = SimpleNamespace(
     remote_base_url='http://localhost'  # 'http://192.168.42.174'
 )
 assert APP_SERVER.type in APP_SERVER_OPTIONS
+# APP_SERVER.default_args.model_path = (
+#     './models/ssd_resnet50_v1_fpn_640x640_coco17_tpu-8'
+#     '/saved_model'
+# )
 APP_SERVER.default_args.model_path = (
-    './models/ssd_resnet50_v1_fpn_640x640_coco17_tpu-8'
-    '/tflite/saved_model/detect.tflite'
+    './models/efficientdet_d3_coco17_tpu-32'
+    '/saved_model'
 )
 TENSORFLOW_SERVING = SimpleNamespace(
     port=8501,

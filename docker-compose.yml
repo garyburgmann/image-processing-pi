@@ -1,0 +1,16 @@
+version: "3.7"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ./api/api.Dockerfile
+    environment:
+      # - SAVED_MODEL_PATH=/srv/models/ssd_resnet50_v1_fpn_640x640_coco17_tpu/saved_model
+      - SAVED_MODEL_PATH=/srv/models/efficientdet_d3_coco17_tpu-32/saved_model
+      - SERVER_TYPE=falcon
+      - ENDPOINT=predict
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./api:/srv/api
