@@ -23,4 +23,8 @@ rm $MODEL_FILE
 MODEL_FILE="ssd_resnet50_v1_fpn_640x640_coco17_tpu-8.tar.gz"
 MODEL_URI="http://download.tensorflow.org/models/object_detection/tf2/20200711/$MODEL_FILE"
 
+curl -O $MODEL_URI
+tar xzvf $MODEL_FILE
+rm $MODEL_FILE
+
 echo -e "TF models downloaded to $MODELS_DIR"
