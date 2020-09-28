@@ -2,13 +2,17 @@
 
 # for m in ssd_mobilenet_v3_small_coco_2020_01_14 ssd_mobilenet_v3_large_coco_2020_01_14
 # do
-#     for i in 0.3 0.2 0.7
+#     for i in 0.5
 #     do
-#        python run_mot.py \
+#         ./bin/start_redis.sh
+#         sleep 5
+#         python run_mot.py \
 #             -m ./models/$m/model.tflite \
 #             --mot ~/mot_challenge/MOT17Det \
 #             --attempt $i \
-#             --threshold $i
+#             --threshold $i \
+#             --num_threads 3 \
+#             --celery
 #     done
 # done
 
