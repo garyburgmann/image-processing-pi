@@ -7,3 +7,5 @@ deploy/
 .idea/
 .vscode/
 __pycache__/
+Dockerfile
+docker-comppose.yml

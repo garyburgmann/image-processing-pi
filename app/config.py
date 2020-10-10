@@ -32,6 +32,10 @@ APP_SERVER.default_args.model_path = (
     './models/efficientdet_d3_coco17_tpu-32'
     '/saved_model'
 )
+# APP_SERVER.default_args.model_path = (
+#     './models/efficientdet_d7_coco17_tpu-32'
+#     '/saved_model'
+# )
 TENSORFLOW_SERVING = SimpleNamespace(
     port=8501,
     remote_base_url='http://localhost',
