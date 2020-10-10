@@ -56,6 +56,7 @@ do
             --api \
             --attempt $i \
             --class_id_offset -1 \
-            --server_threshold $i
+            --server_threshold $i \
+            --redis
     done
 done

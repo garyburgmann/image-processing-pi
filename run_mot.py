@@ -74,6 +74,11 @@ def get_args() -> argparse.Namespace:
         type=float,
         help='confidence threshold for server only',
     )
+    parser.add_argument(
+        '--redis',
+        action='store_true',
+        help='use redis for threshold management',
+    )
     return parser.parse_args()
 
 
@@ -122,6 +127,8 @@ def main() -> None:
                 cmd += f' --num_threads {args.num_threads}'
             if args.server_threshold:
                 cmd += f' --server_threshold {args.server_threshold}'
+            if args.redis:
+                cmd += ' --redis'
 
             _ = subprocess.call(cmd, shell=True)
 

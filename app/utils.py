@@ -243,6 +243,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         '--redis',
         action='store_true',
+        help='use redis for threshold management',
+    )
+    parser.add_argument(
+        '--redis_server',
+        action='store_true',
         help='classify with redis pub/sub',
     )
     parser.add_argument(
