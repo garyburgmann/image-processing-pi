@@ -6,11 +6,11 @@ DEFAULT_ARGS = SimpleNamespace(
     labels_path='./labels/coco_labels.txt',
     target='person',
     threshold=0.3,
-    server_threshold=0.5,
+    server_threshold=0.3,
     num_threads=4,
     camera=0,
     class_id_offset=0,
-    server_modulus=30,
+    server_modulus=20,
     class_id_offset_celery=-1  # for tensorflow_serving
 )
 APP_SERVER_OPTIONS = ['flask', 'falcon']
@@ -21,7 +21,7 @@ APP_SERVER = SimpleNamespace(
     debug=False,
     endpoint='predict',
     default_args=copy.deepcopy(DEFAULT_ARGS),
-    remote_base_url='http://localhost'  # 'http://192.168.42.174'
+    remote_base_url='http://localhost'  # 'http://mb.local'
 )
 assert APP_SERVER.type in APP_SERVER_OPTIONS
 # APP_SERVER.default_args.model_path = (
@@ -53,7 +53,7 @@ CELERY_CONFIG = SimpleNamespace(
     accept_content=['pickle']
 )
 CELERY_API_SERVER_OPTIONS = ['api', 'tensorflow_serving']
-CELERY_API_SERVER = CELERY_API_SERVER_OPTIONS[1]
+CELERY_API_SERVER = CELERY_API_SERVER_OPTIONS[0]
 assert CELERY_API_SERVER in CELERY_API_SERVER_OPTIONS
 # THRESHOLD_INCREMENT = 0.05  # used to tune quadrants
 THRESHOLD_CONFIG = SimpleNamespace(

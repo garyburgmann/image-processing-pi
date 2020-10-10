@@ -4,6 +4,7 @@ import time
 from typing import List, Dict
 # from concurrent.futures import ThreadPoolExecutor
 import pickle
+import uuid
 
 import cv2
 
@@ -47,6 +48,7 @@ if __name__ == '__main__':
     total_detections = 0
     previous_zero = False
     all_results: List[List[Dict]] = []
+    thresholds_history = []
     # executor = ThreadPoolExecutor()
     start = time.time()
     for frame_idx, frame in enumerate(video.frames(), 1):
@@ -95,17 +97,19 @@ if __name__ == '__main__':
                 frame_idx
             )
 
+        thresholds_history.append(thresholds)
         # classify locally threaded
         # x = executor.submit(run_classifier, img=input_frame, clf=clf)
         # results, num_boxes = x.result()
         # print('x.result(): ', x.result())
 
-        print('inference time: ', time.time() - inference_start)
+        inference_end = time.time()
 
         # results = rescale_results(frame, results)
 
         # print('results, num_boxes: ', results, num_boxes)
         # 2 dimensional by design
+
         all_results.append(results)
 
         if args.display:
@@ -122,6 +126,7 @@ if __name__ == '__main__':
         time_from_start = time.time() - start
 
         if not args.quiet:
+            print('inference time: ', inference_end - inference_start)
             log_metrics(
                 time_from_start,
                 frame_idx,
@@ -129,8 +134,12 @@ if __name__ == '__main__':
                 total_detections,
                 results
             )
+            print('console output time: ', time.time() - inference_end)
 
-    with open('./results.txt', 'a+') as f:
+
+    pk = str(uuid.uuid4())
+    filename_thresholds = f'./out/{pk}.txt'
+    with open('./out/results.txt', 'a+') as f:
         f.write(
             f'Dataset: {args.v}, '
             f'Time: {int(time_from_start)}, '
@@ -138,4 +147,12 @@ if __name__ == '__main__':
             f'FPS: {int(frame_idx/time_from_start)}, '
             f'Total Det: {total_detections}\n'
         )
+        f.write(
+            f'Args: {args}\n'
+            f'Thresholds: {filename_thresholds}\n'
+        )
+    with open(filename_thresholds, 'w+') as f:
+        for x in thresholds_history:
+            f.write(f'{x}\n')
+
     dump_results(all_results, args.out)

@@ -23,7 +23,7 @@ from app.config import (
 )
 from app.redis import get_redis
 
-# r = get_redis()
+r = get_redis()
 
 
 def run_classifier(
@@ -443,8 +443,9 @@ def format_results(
                         class_label
                     )
                 )
-    
-    print(f'format_results run against thresholds: {thresholds}')
+    if is_server:
+        thresholds['__all__'] = threshold
+    # print(f'format_results run against thresholds: {thresholds}')
     return results, thresholds  # return thresholds for async comparison
     # return [
     #     {
@@ -505,7 +506,7 @@ def get_quadrant_key(frame: np.ndarray, bbox: List) -> str:
     elif not is_y_min and is_x_min:
         key = 'q3'
     elif not is_y_min and not is_x_min:
-        key = 'q3'
+        key = 'q4'
 
     return key
 

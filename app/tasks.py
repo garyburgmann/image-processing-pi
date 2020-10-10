@@ -32,6 +32,9 @@ def detect_and_compare(
     args_copy.__dict__[CELERY_API_SERVER] = True
     # override as using full model may require diff offset to onboard
     args_copy.class_id_offset = args_copy.class_id_offset_celery
+
+    print(f'{__name__} | args_copy: {args_copy}')
+
     results, num_boxes, thresholds = detect_api(frame, args=args_copy)
 
     onboard_res, offboard_res = \

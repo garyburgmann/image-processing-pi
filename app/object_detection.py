@@ -162,10 +162,10 @@ class ObjectDetection:
 
     def exec(self, img: np.ndarray) -> List[Dict]:
         try:
+            # start_time = time.time()
             img = self._resize_image(img)
-            # start_time = time.monotonic()
+            # print('_resize_image time: ', time.time() - start_time)
             results = self._detect_objects(img)
-            # elapsed_ms = (time.monotonic() - start_time) * 1000
         except Exception as exc:
             print(str(exc))
             results = []
